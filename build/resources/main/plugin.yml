@@ -1,0 +1,11 @@
+name: MythicParties
+version: '1.0-PRERELEASE'
+main: ru.streamversus.mythicparties.MythicParties
+api-version: '1.20'
+prefix: MythicParties
+authors: [StreamVersus]
+description: Party plugin
+softdepend:
+  - WorldGuard
+  - MythicDungeons
+  - PlaceholderAPI
