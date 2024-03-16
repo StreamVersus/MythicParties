@@ -6,8 +6,6 @@ import dev.jorel.commandapi.arguments.*;
 import dev.jorel.commandapi.executors.CommandArguments;
 import dev.jorel.commandapi.wrappers.Rotation;
 import lombok.Getter;
-import net.playavalon.mythicdungeons.MythicDungeons;
-import net.playavalon.mythicdungeons.api.party.IDungeonParty;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -18,6 +16,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.BiFunction;
@@ -81,6 +80,7 @@ public class PartyService {
         if (invitedPlayer == null) return config.sendMessage(p, "invite_no_player");
         Party party = leaderMap.get(p.getUniqueId());
         if(party.getLimit() < party.getPlayerCount()+2) return config.sendMessage(p, "invite_party_full");
+        if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return config.sendMessage(p, "invite_already_invited");
         invitedMap.put(invitedPlayer.getUniqueId(), party);
         config.sendMessage(invitedPlayer, "invite_alert");
         return true;
@@ -136,6 +136,15 @@ public class PartyService {
         if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
         invitedMap.remove(sender.getUniqueId());
         leaderMap.get(invitesender.getUniqueId()).addPlayer(sender);
+        config.sendMessage(invitesender, "invite_accepted");
+        return true;
+    }
+    public boolean refuse(Player sender){
+        if(!invitedMap.containsKey(sender.getUniqueId())) return config.sendMessage(sender, "accept_no_invites");
+        Player invitesender = (Player) invitedMap.get(sender.getUniqueId()).getLeader();
+        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
+        invitedMap.remove(sender.getUniqueId());
+        config.sendMessage(invitesender, "invite_refused");
         return true;
     }
     public boolean help(Player sender){
@@ -151,6 +160,7 @@ public class PartyService {
             put("disband", (player, args) -> disband((Player) player));
             put("slotplayer", (player, args) -> swapSlots((Player) player, args));
             put("accept", (player, args) -> accept((Player) player));
+            put("refuse", (player, args) -> refuse((Player) player));
         }};
         Map<String, Boolean> playerArgmap = new HashMap<>(){{
             put("invite", true);
@@ -183,7 +193,7 @@ public class PartyService {
         CommandAPICommand command = partyadmincommandRegister.getCommand();
         CommandAPICommand teleport = new CommandAPICommand("teleport") {{
             withPermission("MysticParties.party_a.teleport");
-            withArguments(new StringArgument("subtag").includeSuggestions(ArgumentSuggestions.strings("trugger_party", "id_", "player_")));
+            withArguments(new StringArgument("subtag"));
             withArguments(new StringArgument("slots"));
             withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
             withArguments(new RotationArgument("rotation"));
@@ -221,7 +231,7 @@ public class PartyService {
             withPermission("MysticParties.party_a.command");
             withArguments(new StringArgument("subtag"));
             withArguments(new StringArgument("slots"));
-            withArguments(new StringArgument("command"));
+            withArguments(new GreedyStringArgument("command"));
             executes((sender, args) -> {
                 List<Player> executeList = new ArrayList<>();
                 String command = (String) args.get("command");
@@ -311,19 +321,25 @@ class Party {
         this.leaderUUID = leader;
         this.playerUUIDs.add(leader);
         if(compatStatus == null) {
-            Plugin md = Bukkit.getPluginManager().getPlugin("MythicDungeons");
-            if (md == null) {
+            if (Bukkit.getPluginManager().isPluginEnabled("MythicDungeons")) {
                 compatStatus = false;
             }else{
-                compatStatus = MythicDungeons.inst().getPartyPluginName().equalsIgnoreCase(plugin.getName());
+                try {
+                    Class<?> mythic = Class.forName("net.playavalon.mythicdungeons.MythicDungeons");
+                    plugin.getLogger().info("test");
+                    Field f = mythic.getDeclaredField("plugin");
+                    f.setAccessible(true);
+                    compatStatus = ((String) mythic.getMethod("getPartyPluginName").invoke(f.get(null))).equalsIgnoreCase(plugin.getName());
+                } catch(Exception ignored){}
             }
+            if(compatStatus == null) compatStatus = false;
         }
         if(compatStatus) {
             try {
                 if (!Party.clazz.getName().equals("IDungeonParty"))
                     Party.clazz = Class.forName("net.playavalon.mythicdungeons.api.party.IDungeonParty");
             } catch(Exception ignored){}
-            IDungeonParty party = (IDungeonParty) Proxy.newProxyInstance(clazz.getClassLoader(),
+            Object party = Proxy.newProxyInstance(clazz.getClassLoader(),
                     new Class[] {Party.clazz},
                     (proxy, method, args) -> {
                         switch (method.getName()) {
@@ -335,11 +351,13 @@ class Party {
                         }
                         return null;
                     });
-            party.initDungeonParty(plugin);
+            try {
+                clazz.getMethod("initDungeonParty", Plugin.class).invoke(party, plugin);
+            }catch(Exception ignored){}
         }
     }
     private void updateLimit(){
-        maxPlayer = MythicParties.getHandler().getLimit(leaderUUID);
+        maxPlayer = config.getLimit();
     }
     public static Party getPartyByID(Integer id){return idList.get(id);}
     public static Integer getPartyCount(){return idList.toArray().length-1;}

@@ -14,20 +14,18 @@ import org.bukkit.plugin.Plugin;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class ConfigParser {
     private final YamlConfiguration langconfig;
     private FileConfiguration config;
     private final Plugin plugin;
-    private final Map<String, String> commandSuccessMap = new HashMap<>(), commandFailMap = new HashMap<>(), soundMap = new HashMap<>();
+    private final Map<String, String> commandSuccessMap = new HashMap<>(), commandFailMap = new HashMap<>(), soundMap = new HashMap<>(), langmap = new HashMap<>();
     @Getter
     private List<String> commandNameList;
     @Getter
     private boolean disband;
     @Getter
     private long leaderDisband, playerKick;
-    private final Map<String, Component> langmap = new HashMap<>();
 
     public ConfigParser(Plugin plugin, YamlConfiguration langconf) {
         this.langconfig = langconf;
@@ -35,6 +33,7 @@ public class ConfigParser {
         plugin.saveDefaultConfig();
         this.config = plugin.getConfig();
         precompileConfig();
+        precompileLanguage();
     }
 
     private void precompileConfig() {
@@ -61,7 +60,20 @@ public class ConfigParser {
         playerKick = disbandSection.getLong("participant");
     }
     private void precompileLanguage(){
-        langconfig.getKeys(false).forEach((key) -> langmap.put(key, MiniMessage.miniMessage().deserialize(Objects.requireNonNull(config.getString(key)))));
+        langconfig.getKeys(false).forEach((key) -> {
+            String v = langconfig.getString(key);
+            if(!(v == null)) langmap.put(key, v);
+        });
+        langmap.forEach((name, content) -> {
+            String acceptTag = "<click:run_command:" + "/" + getCommandNameList().get(0) + " accept" + ">";
+            String rawAccept = acceptTag + langconfig.getString("button_accept") + "</click>";
+            langmap.replace(name, content.replaceAll("\\$button_accept\\$", rawAccept));
+        });
+        langmap.forEach((name, content) -> {
+            String refuseTag = "<click:run_command:" + "/" + getCommandNameList().get(0) + " refuse" + ">";
+            String rawRefuse = refuseTag + langconfig.getString("button_refuse") + "</click>";
+            langmap.replace(name, content.replaceAll("\\$button_refuse\\$", rawRefuse));
+        });
     }
 
     public String getCommand(boolean status, String name) {
@@ -70,7 +82,7 @@ public class ConfigParser {
 
     public void playSound(String name, Player p) {
         String soundName = soundMap.get(name);
-        if (soundName == null) throw new RuntimeException("WRONG STRING IN playSound!!!");
+        if (soundName == null) return;
         String[] split = soundName.split(" ");
         p.playSound(p, Sound.valueOf(split[0]), Float.parseFloat(split[1]), Float.parseFloat(split[2]));
     }
@@ -91,10 +103,13 @@ public class ConfigParser {
     }
 
     public boolean sendMessage(Player p, String key){
-        p.sendMessage(langmap.get(key));
-        return false;
+        String raw = langmap.get(key);
+        if(raw == null) return false;
+        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_sender\\$", p.getName()));
+        p.sendMessage(replaced);
+        return true;
     }
     public Message getMessage(String key){
-        return new LiteralMessage(langmap.get(key).toString());
+        return new LiteralMessage(langmap.get(key));
     }
 }

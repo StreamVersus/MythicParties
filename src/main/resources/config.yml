@@ -7,6 +7,7 @@ commands_name:
 global_max_limit: 3
 
 #https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Sound.html
+#название_команды: название_звука громкость питч
 sound_notification:
   invite:
   invite_accepted:
@@ -14,6 +15,7 @@ sound_notification:
   kick:
   disband:
   slotplayer:
+  help:
 
 timer_to_kick:
   leader: 3600
@@ -43,6 +45,9 @@ command_trigger:
     commands:
     commands_fail:
   part_accept:
+    commands:
+    commands_fail:
+  party_refuse:
     commands:
     commands_fail:
   party_a_teleport:

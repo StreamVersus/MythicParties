@@ -35,14 +35,14 @@ public class PlaceHolderExpansion extends PlaceholderExpansion {
     @Override
     public String onRequest(OfflinePlayer player, @NotNull String params) {
         Player p = (Player) player;
-        if(params.equalsIgnoreCase("party_id")){return partyService.getPartyID(p).toString();}
-        else if(params.equalsIgnoreCase("party_leader_name")){return partyService.getLeaderName(p);}
-        else if(params.equalsIgnoreCase("party_size")){return partyService.getPartySize(p).toString();}
-        else if(params.equalsIgnoreCase("party_size_free")){return partyService.getFreeSlots(p).toString();}
-        else if(params.equalsIgnoreCase("party_slot")){return partyService.getPlayerID(p).toString();}
-        else if(params.equalsIgnoreCase("party_max_limit")){return partyService.getPartyLimit(p).toString();}
-        else if(params.equalsIgnoreCase("party_leader_stats")){return partyService.isPlayerLeader(p) ? "Yes" : "No";}
-        else if(params.equalsIgnoreCase("party_participant_stats")){return partyService.isPlayerParticipant(p) ? "Yes" : "No";}
+        if(params.equalsIgnoreCase("id")){return partyService.getPartyID(p).toString();}
+        else if(params.equalsIgnoreCase("leader_name")){return partyService.getLeaderName(p);}
+        else if(params.equalsIgnoreCase("size")){return partyService.getPartySize(p).toString();}
+        else if(params.equalsIgnoreCase("size_free")){return partyService.getFreeSlots(p).toString();}
+        else if(params.equalsIgnoreCase("slot")){return partyService.getPlayerID(p).toString();}
+        else if(params.equalsIgnoreCase("max_limit")){return partyService.getPartyLimit(p).toString();}
+        else if(params.equalsIgnoreCase("leader_stats")){return partyService.isPlayerLeader(p) ? "Yes" : "No";}
+        else if(params.equalsIgnoreCase("participant_stats")){return partyService.isPlayerParticipant(p) ? "Yes" : "No";}
         else{
             if(params.matches("party_member_name_\\[.*]")){
                 return partyService.getPlayerName(p, Integer.valueOf(params.split("\\[")[1].split("]")[0]));

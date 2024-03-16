@@ -1,10 +1,13 @@
+# https://docs.advntr.dev/minimessage/index.html
 leave_leader:
 leave_no_party:
 invite_non_leader:
 invite_no_player:
-invite_alert:
+invite_already_invited:
+invite_alert: $button_accept$ - $button_refuse$
 invite_party_full:
-invite_player_joined:
+invite_accepted:
+invite_refused:
 givelead_non_leader:
 givelead_no_player:
 givelead_alert:
@@ -17,7 +20,10 @@ swap_non_leader:
 swap_wrong_args:
 accept_no_invites:
 accept_wrong_args:
+
 help:
+button_accept: <green>Принять</green>
+button_refuse: <red>Отказать</red>
 
 wrong_subtag:
 command_wrong_args:

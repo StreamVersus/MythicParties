@@ -2,6 +2,7 @@ package ru.streamversus.mythicparties;
 
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.IntegerFlag;
+import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
 import com.sk89q.worldguard.session.SessionManager;
 import dev.jorel.commandapi.CommandAPI;
@@ -29,7 +30,7 @@ public final class MythicParties extends JavaPlugin implements Listener {
     @Getter
     private static IntegerFlag limitFlag;
     @Getter
-    private static FlagHandler handler;
+    private static StateFlag FFFlag;
     @Getter
     private static MythicParties plugin;
     @Override
@@ -40,8 +41,9 @@ public final class MythicParties extends JavaPlugin implements Listener {
         registry.register(flag);
         limitFlag = flag;
 
-        SessionManager sessionManager = WorldGuard.getInstance().getPlatform().getSessionManager();
-        sessionManager.registerHandler(FlagHandler.FACTORY, null);
+        StateFlag flag2 = new StateFlag("party-friendly-fire", true);
+        registry.register(flag2);
+        FFFlag = flag2;
     }
     @Override
     public void onEnable() {
@@ -55,12 +57,17 @@ public final class MythicParties extends JavaPlugin implements Listener {
                 .shouldHookPaperReload(true)
                 .silentLogs(configParser.getVerbose()));
         CommandAPI.onEnable();
+        CommandAPIBukkit.unregister(configParser.getCommandNameList().get(0), true, true);
+        CommandAPIBukkit.unregister(configParser.getCommandNameList().get(1), true, true);
         partyService = new PartyService(this, configParser);
         getServer().getPluginManager().registerEvents(this, this);
         Bukkit.getOnlinePlayers().forEach((player) -> partyService.createParty(player));
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new PlaceHolderExpansion(partyService).register();
         }
+        if(!Bukkit.getPluginManager().isPluginEnabled("WorldGuard")) return;
+        SessionManager sessionManager = WorldGuard.getInstance().getPlatform().getSessionManager();
+        sessionManager.registerHandler(FlagHandler.FACTORY, null);
     }
 
     @Override

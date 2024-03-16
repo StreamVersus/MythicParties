@@ -46,7 +46,7 @@ public class CommandRegister {
             System.out.println("Plugin doesn't support executing commands from Console");
             return;
         }
-        config.playSound(name, p);
+        if(!(name == null)) config.playSound(name, p);
         boolean success = consumer.apply(sender, args);
         String command = config.getCommand(success, commandName+ "_" + name);
         if(Objects.equals(command, null)) return;
