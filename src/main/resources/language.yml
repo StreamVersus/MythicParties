@@ -1,31 +1,33 @@
-# https://docs.advntr.dev/minimessage/index.html
-leave_leader: <i[:true]><red>Вы - лидер<br>Лидеры не могут покидать команду!</red><!i>
-leave_no_party: <i[:true]><red>Вы не состоите в команде!</red><!i>
-invite_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-invite_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
-invite_already_invited: <i[:true]><purple>Кто-то уже пригласил данного игрока!</purple><!i>
-invite_alert: <i[:true]>Вас пригласил игрок $player_sender$ в команду<br>$button_accept$ - $button_refuse$ <!i>
-invite_party_full: <i[:true]><red>Ваша команда заполнена!</red><!i>
-invite_accepted: <i[:true]><green>Игрок $player_invited$ вступил в команду</green><!i>
-invite_refused: <i[:true]><red>Игрок $player_invited$ отказался от вступления в команду</red><!i>
-givelead_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-givelead_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
-givelead_alert: <i[:true]><purple>Теперь вы лидер!</purple><!i>
-kick_alert: <i[:true]><purple>Вы были выгнанны из команды</purple><!i>
-kick_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-kick_no_player: <i[:true]><red>Такого игрока не существует!</red><!i>
-disband_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-disband_alert: <i[:true]><purple>Команда была распущена</purple><!i>
-swap_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-swap_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
-accept_no_invites: <i[:true]><red>Вас еще не приглашали!</red><!i>
-accept_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
+# https://docs.advntr.dev/minimessage/format.html
+# https://webui.advntr.dev/
 
-help: <i[:true]><orange>Это плагин на команды!</orange><!i>
+leave_leader: <i><b><red>Вы - лидер<br>Лидеры не могут покидать команду!</red></b></i>
+leave_no_party: <i><b><red>Вы не состоите в команде!</red></b></i>
+invite_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
+invite_no_player: <i><b><red>Таког игрока не существует!</red></b></i>
+invite_already_invited: <i><b><purple>Кто-то уже пригласил данного игрока!</purple></b></i>
+invite_alert: <i><b>Вас пригласил игрок $player_sender$ в команду<br>$button_accept$ - $button_refuse$ </b></i>
+invite_party_full: <i><b><red>Ваша команда заполнена!</red></b></i>
+invite_accepted: <i><b><green>Игрок $player_invited$ вступил в команду</green></b></i>
+invite_refused: <i><b><red>Игрок $player_invited$ отказался от вступления в команду</red></b></i>
+givelead_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
+givelead_no_player: <i><b><red>Таког игрока не существует!</red></b></i>
+givelead_alert: <i><b><purple>Теперь вы лидер!</purple></b></i>
+kick_alert: <i><b><purple>Вы были выгнанны из команды</purple></b></i>
+kick_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
+kick_no_player: <i><b><red>Такого игрока не существует!</red></b></i>
+disband_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
+disband_alert: <i><b><purple>Команда была распущена</purple></b></i>
+swap_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
+swap_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
+accept_no_invites: <i><b><red>Вас еще не приглашали!</red></b></i>
+accept_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
+
+help: <i><b><orange>Это плагин на команды!</orange></b></i>
 button_accept: <green>Принять</green>
 button_refuse: <red>Отказать</red>
 
-wrong_subtag: <i[:true]><red>Неверный под-тег!</red><!i>
-command_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
-command_fail: <i[:true]><red>Указанная команда не сработала!</red><!i>
+wrong_subtag: <i><b><red>Неверный под-тег!</red></b></i>
+command_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
+command_fail: <i><b><red>Указанная команда не сработала!</red></b></i>
 
