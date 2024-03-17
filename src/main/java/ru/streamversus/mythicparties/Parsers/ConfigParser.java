@@ -1,7 +1,5 @@
 package ru.streamversus.mythicparties.Parsers;
 
-import com.mojang.brigadier.LiteralMessage;
-import com.mojang.brigadier.Message;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -11,6 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,8 +113,5 @@ public class ConfigParser {
         if(raw == null) return;
         Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_sender\\$", p.getName()).replaceAll("\\$player_invited\\$", invited.getName()));
         invited.sendMessage(replaced);
-    }
-    public Message getMessage(String key){
-        return new LiteralMessage(langmap.get(key));
     }
 }

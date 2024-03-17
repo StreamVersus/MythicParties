@@ -40,7 +40,7 @@ public class FlagHandler extends Handler {
         if(entered.isEmpty() && exited.isEmpty()) return;
         if(entered.isEmpty()) {limitMap.remove(player.getUniqueId()); return; }
         for(ProtectedRegion region : entered) {
-            Integer limit = region.getFlag(MythicParties.getLimitFlag());
+            Integer limit = region.getFlag(CompatibilityHandler.getLimitFlag());
             if(limit == null || limit == 0) continue;
             if(!(buffer > limit)) buffer = limit;
         }
@@ -51,7 +51,7 @@ public class FlagHandler extends Handler {
         if(entered.isEmpty() && exited.isEmpty()) return;
         if(entered.isEmpty()) {FFOffSet.remove(player.getUniqueId()); return; }
         for(ProtectedRegion region : entered) {
-            StateFlag.State status = region.getFlag(MythicParties.getFFFlag());
+            StateFlag.State status = region.getFlag(CompatibilityHandler.getFFFlag());
             if(status == null) continue;
             if(status == StateFlag.State.DENY) buffer = true;
         }

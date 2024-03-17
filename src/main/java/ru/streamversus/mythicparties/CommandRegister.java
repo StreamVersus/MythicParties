@@ -1,8 +1,9 @@
 package ru.streamversus.mythicparties;
 
 import dev.jorel.commandapi.CommandAPICommand;
+import dev.jorel.commandapi.arguments.ArgumentSuggestions;
+import dev.jorel.commandapi.arguments.IntegerArgument;
 import dev.jorel.commandapi.arguments.PlayerArgument;
-import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -23,8 +24,11 @@ public class CommandRegister {
     @Getter
     private final CommandAPICommand Command;
     private final ConfigParser config;
-    CommandRegister(String name, ConfigParser config) {
+    private final PartyService service;
+
+    CommandRegister(String name, ConfigParser config, PartyService service) {
         this.config = config;
+        this.service = service;
         try{
             Bukkit.getServer().getPluginManager().addPermission(new Permission("MythicParties." + name));
         } catch (IllegalArgumentException ignored) {}
@@ -38,7 +42,15 @@ public class CommandRegister {
                 .withPermission("MysticParties." + commandName + "." + name)
                 .executes((sender, args) -> {commandHandler(consumer, name, sender, args);});
         if(playerArg) c.withArguments(new PlayerArgument("playerArg"));
-        if(slotArg) c.withArguments(new StringArgument("slotArg").includeSuggestions(PartyService.getSlotSuggestor()));
+        if(slotArg) c.withArguments(new IntegerArgument("slotArg").includeSuggestions(ArgumentSuggestions.strings(info -> {
+            int i = service.getPartySize((Player) info.sender());
+            if(i>10) i = 10;
+            List<String> retval = new ArrayList<>();
+            for(int f = 1; f<=i; f++){
+                retval.add(String.valueOf(f));
+            }
+            return retval.toArray(String[]::new);
+        })));
         nameList.add(name);
         return c;
     }

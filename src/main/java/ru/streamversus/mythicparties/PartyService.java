@@ -1,6 +1,5 @@
 package ru.streamversus.mythicparties;
 
-import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.*;
 import dev.jorel.commandapi.executors.CommandArguments;
@@ -25,7 +24,6 @@ import java.util.function.Consumer;
 
 public class PartyService {
     private final Plugin plugin;
-    @Getter
     private static ArgumentSuggestions<CommandSender> slotSuggestor = null;
     private final ArgumentSuggestions<CommandSender> subTagSuggestor;
     private final Map<UUID, BukkitTask> disbandTask = new HashMap<>(), kickTask = new HashMap<>();
@@ -36,15 +34,15 @@ public class PartyService {
     PartyService(Plugin plugin, ConfigParser config) {
         this.config = config;
         this.plugin = plugin;
-        this.partycommandRegister = new CommandRegister(config.getCommandNameList().get(0), config);
-        this.partyadmincommandRegister = new CommandRegister(config.getCommandNameList().get(1), config);
+        this.partycommandRegister = new CommandRegister(config.getCommandNameList().get(0), config, this);
+        this.partyadmincommandRegister = new CommandRegister(config.getCommandNameList().get(1), config, this);
         slotSuggestor = ArgumentSuggestions.strings(info -> {
             if(Objects.equals(info.currentArg(), "all")) return new String[]{"all"};
             String subtag = (String) info.previousArgs().get("subtag");
             if(subtag == null) return null;
             Party party = parsesubTag(subtag, (Player) info.sender());
             String[] raw = {""};
-            if(!info.currentArg().isEmpty()) raw[0] = "all/";
+            if(info.currentArg().isEmpty()) raw[0] = "all";
             String currentinput = info.currentArg();
             if(currentinput.startsWith("a")) return new String[]{"all"};
             party.forEach((player) -> {
@@ -57,32 +55,34 @@ public class PartyService {
         );
         subTagSuggestor = ArgumentSuggestions.strings(info -> {
             String currentArg = info.currentArg();
-            if(currentArg.contains("@i")) {
+            if(currentArg.contains("i")) {
                 int id = Party.idList.toArray().length;
                 if (id > 9) id = 9;
                 List<String> retval = new ArrayList<>();
                 for (int i = 0; i < id; i++) {
-                    retval.add("@id_" + i);
+                    retval.add("id_" + i);
                 }
+                if(retval.contains(currentArg)) return new String[]{currentArg};
                 return retval.toArray(String[]::new);
             }
-            if(currentArg.contains("@p")){
+            if(currentArg.contains("p")){
                 List<String> retval = new ArrayList<>();
                 Collection<? extends Player> playerList = Bukkit.getOnlinePlayers();
                 int l = playerList.size();
                 if(l > 9) l = 9;
                 for (int i = 0; i < l; i++) {
-                    retval.add("@player_" + playerList.toArray()[i]);
+                    Player p = (Player) playerList.toArray()[i];
+                    retval.add("player_" + p.getName());
                 }
                 return retval.toArray(String[]::new);
             }
-            if(currentArg.contains("@t")){
-                return new String[]{"@trugger_team"};
+            if(currentArg.contains("t")){
+                return new String[]{"trugger_team"};
             }
             String[] retval = new String[3];
-            retval[0] = "@trugger_team";
-            retval[1] = "@id_*";
-            retval[2] = "@player_*";
+            retval[0] = "trugger_team";
+            retval[1] = "id_*";
+            retval[2] = "player_*";
             return retval;
         });
         commandParty();
@@ -128,9 +128,10 @@ public class PartyService {
     public boolean invite(Player p, CommandArguments args) {
         if (isntLeader(p)) return config.sendMessage(p, "invite_non_leader");
         Player invitedPlayer = (Player) args.get("playerArg");
+        if(p == invitedPlayer) return config.sendMessage(p, "invite_self");
         if (invitedPlayer == null) return config.sendMessage(p, "invite_no_player");
         Party party = leaderMap.get(p.getUniqueId());
-        if(party.getLimit() < party.getPlayerCount()+2) return config.sendMessage(p, "invite_party_full");
+        if(party.getLimit() < party.getPlayerCount()+1) return config.sendMessage(p, "invite_party_full");
         if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return config.sendMessage(p, "invite_already_invited");
         invitedMap.put(invitedPlayer.getUniqueId(), party);
         config.sendInvite(p, "invite_alert", invitedPlayer);
@@ -177,7 +178,16 @@ public class PartyService {
         Party party = leaderMap.get(send.getUniqueId());
         Integer slot = (Integer) args.get("slotArg");
         if(slot == null || p == null) return config.sendMessage(send, "swap_wrong_args");
-        Player m = party.getPlayer(slot);
+        if(slot == 1) return config.sendMessage(send, "swap_leader");
+        int i = party.getPlayerID(p);
+        if(i == -1) return config.sendMessage(send, "swap_empty_slot");
+        if(i == slot) return config.sendMessage(send, "swap_already");
+        Player m;
+        try {
+            m = party.getPlayer(slot);
+        } catch(Exception e){
+            return config.sendMessage(send, "swap_empty_slot");
+        }
         party.swapPlayers(p, m);
         return true;
     }
@@ -217,6 +227,7 @@ public class PartyService {
             put("invite", true);
             put("givelead", true);
             put("kick", true);
+            put("slotplayer", true);
         }};
         Map<String, Boolean> slotArgmap = new HashMap<>(){{
             put("slotplayer", true);
@@ -240,68 +251,75 @@ public class PartyService {
         } else throw new NullPointerException();
         return party;
     }
+    private List<Player> parseSlots(String raw, Player p){
+        List<Player> retval = new ArrayList<>();
+        Party party = partyMap.get(p.getUniqueId());
+
+        if(raw.equals("all")) {
+            retval = party.getPlayers();
+        }else{
+            String[] slots = (raw).split("/");
+            for (String s : slots) {
+                int id;
+                try {
+                 id = Integer.parseInt(s);
+                } catch (Exception e){
+                    config.sendMessage(p, "wrong_slots");
+                    return null;
+                }
+                Player p1 = party.getPlayer(id);
+                if(p1 == null) {
+                    config.sendMessage(p, "wrong_slots");
+                    return null;
+                }
+                retval.add(p1);
+            }
+        }
+        return retval;
+    }
+    private List<Player> parseSlots(String raw, Player p, Party party){
+        List<Player> retval = new ArrayList<>();
+
+        if(raw.equals("all")) {
+            retval = party.getPlayers();
+        }else{
+            String[] slots = (raw).split("/");
+            for (String s : slots) {
+                int id;
+                try {
+                    id = Integer.parseInt(s);
+                } catch (Exception e){
+                    config.sendMessage(p, "wrong_slots");
+                    return null;
+                }
+                Player p1 = party.getPlayer(id);
+                if(p1 == null) {
+                    config.sendMessage(p, "wrong_slots");
+                    return null;
+                }
+                retval.add(p1);
+            }
+        }
+        return retval;
+    }
     private void commandParty_a(){
         CommandAPICommand command = partyadmincommandRegister.getCommand();
         CommandAPICommand teleport = new CommandAPICommand("teleport") {{
             withPermission("MysticParties.party_a.teleport");
-            withArguments(new StringArgument("subtag").includeSuggestions(subTagSuggestor));
-            withArguments(new StringArgument("slots").includeSuggestions(slotSuggestor));
+            withArguments(new TextArgument("subtag").includeSuggestions(subTagSuggestor));
+            withArguments(new TextArgument("slots").includeSuggestions(slotSuggestor));
             withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
             withArguments(new RotationArgument("rotation"));
             withArguments(new WorldArgument("world"));
             withArguments(new StringArgument("server"));
-            executes((sender, args) -> {
-                Party party;
-                List<Player> teleportList = new ArrayList<>();
-                String subtag = (String) args.get("subtag");
-                assert subtag != null;
-                try{
-                    party = parsesubTag(subtag, (Player) sender);
-                }catch(Exception e){
-                    throw CommandAPI.failWithMessage(config.getMessage("wrong_subtag"));
-                }
-                String slot = (String) args.get("slots");
-                assert slot != null;
-                if(slot.equals("all")) {
-                    teleportList = party.getPlayers();
-                }else{
-                    String[] slots = (slot).split("/");
-                    for (String s : slots) {teleportList.add(party.getPlayer(Integer.parseInt(s)));}
-                }
-                Location tploc = (Location) args.get("location");
-                Rotation rot = (Rotation) args.get("rotation");
-                assert tploc != null;
-                assert rot != null;
-                tploc.setYaw(rot.getYaw());
-                tploc.setPitch(rot.getPitch());
-                System.out.println(teleportList);
-                teleportList.forEach((Player) -> Player.teleport(tploc));
-            });
+            executes((sender, args) -> {CommandWrapper2((Player) sender, args);});
         }};
         CommandAPICommand execute = new CommandAPICommand("command"){{
             withPermission("MysticParties.party_a.command");
-            withArguments(new StringArgument("subtag").includeSuggestions(subTagSuggestor));
-            withArguments(new StringArgument("slots").includeSuggestions(slotSuggestor));
+            withArguments(new TextArgument("subtag").includeSuggestions(subTagSuggestor));
+            withArguments(new TextArgument("slots").includeSuggestions(slotSuggestor));
             withArguments(new GreedyStringArgument("command"));
-            executes((sender, args) -> {
-                List<Player> executeList = new ArrayList<>();
-                String command = (String) args.get("command");
-                if(command == null || !command.matches("/.*")) throw CommandAPI.failWithMessage(config.getMessage("command_wrong_args"));
-                Party party = parsesubTag((String) Objects.requireNonNull(args.get("subtag")), (Player) sender);
-                String slot = (String) args.get("slots");
-                assert slot != null;
-                if(slot.equals("all")) {
-                    executeList = party.getPlayers();
-                }else{
-                    String[] slots = (slot).split("/");
-                    for (String s : slots) {executeList.add(party.getPlayer(Integer.parseInt(s)));}
-                }
-                List<Boolean> buffer = new ArrayList<>();
-                for (Player player : executeList) {
-                    buffer = Collections.singletonList(player.performCommand(command));
-                }
-                if(buffer.contains(false)) throw CommandAPI.failWithMessage(config.getMessage("command_fail"));
-            });
+            executes((sender, args) -> {CommandWrapper((Player) sender, args);});
         }};
         CommandAPICommand reloadConfig = new CommandAPICommand("reloadConfig")
                 .withPermission("MysticParties.party_a.reloadconfig")
@@ -315,6 +333,54 @@ public class PartyService {
             Bukkit.getServer().getPluginManager().addPermission(new Permission("MysticParties.party_a.reloadconfig"));
         } catch (IllegalArgumentException ignored) {}
         command.register();
+    }
+    private void CommandWrapper(Player sender, CommandArguments args){
+        String slot = (String) args.get("slots");
+        assert slot != null;
+        List<Player> executeList = parseSlots(slot, sender);
+        if(executeList == null){
+            config.sendMessage(sender, "wrong_subtag");
+            return;
+        }
+        String command = (String) args.get("command");
+        if(command == null){
+            config.sendMessage(sender, "command_wrong_args");
+            return;
+        }
+        List<Boolean> buffer = new ArrayList<>();
+        for (Player player : executeList) {
+            buffer = Collections.singletonList(player.performCommand(command));
+        }
+        if(buffer.contains(false)){
+            config.sendMessage(sender, "command_fail");
+        }
+    }
+    public void CommandWrapper2(Player sender, CommandArguments args){
+        Party party;
+        List<Player> teleportList;
+        String subtag = (String) args.get("subtag");
+        assert subtag != null;
+        try{
+            party = parsesubTag(subtag, sender);
+        }catch(Exception e){
+            config.sendMessage(sender, "wrong_subtag");
+            return;
+        }
+        String slot = (String) args.get("slots");
+        assert slot != null;
+        teleportList = parseSlots(slot, sender, party);
+        if(teleportList == null){
+            config.sendMessage(sender, "wrong_slots");
+            return;
+        }
+        Location tploc = (Location) args.get("location");
+        Rotation rot = (Rotation) args.get("rotation");
+        assert tploc != null;
+        assert rot != null;
+        tploc.setYaw(rot.getYaw());
+        tploc.setPitch(rot.getPitch());
+        System.out.println(teleportList);
+        teleportList.forEach((Player) -> Player.teleport(tploc));
     }
     public Integer getPartyID(Player p){
         return partyMap.get(p.getUniqueId()).getId();
@@ -408,9 +474,13 @@ class Party {
         }
     }
     private void updateLimit(){
-        Integer limit = FlagHandler.getLimitMap().get(leaderUUID);
-        System.out.println(limit == null ? config.getLimit() : limit);
-        maxPlayer = limit == null ? config.getLimit() : limit;
+        if(MythicParties.getCompHandler() == null) {
+            maxPlayer = config.getLimit();
+        }
+        else {
+            Integer limit = MythicParties.getCompHandler().getLimit(leaderUUID);
+            maxPlayer = limit == null ? config.getLimit() : limit;
+        }
     }
     public static Party getPartyByID(Integer id){return idList.get(id);}
     public static Integer getPartyCount(){return idList.toArray().length-1;}
@@ -423,7 +493,13 @@ class Party {
         }
     }
     public int getPlayerID(Player p){
-        return playerUUIDs.indexOf(p.getUniqueId());
+        int i;
+        try{
+            i = playerUUIDs.indexOf(p.getUniqueId())+1;
+        } catch (Exception e){
+            return -1;
+        }
+        return i;
     }
     public int getLimit(){
         updateLimit();
@@ -437,7 +513,7 @@ class Party {
         playerUUIDs.forEach(uuid -> players.add(Bukkit.getPlayer(uuid)));
         return players;
     }
-    public Player getPlayer(int id){return Bukkit.getPlayer(playerUUIDs.get(id));}
+    public Player getPlayer(int id){return Bukkit.getPlayer(playerUUIDs.get(id-1));}
     public void swapPlayers(Player p, Player m){
         int firstindex = playerUUIDs.indexOf(p.getUniqueId());
         int secondindex = playerUUIDs.indexOf(m.getUniqueId());
