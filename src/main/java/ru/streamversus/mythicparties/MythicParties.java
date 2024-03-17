@@ -11,16 +11,19 @@ import dev.jorel.commandapi.CommandAPIBukkitConfig;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 
 import java.io.File;
+import java.util.Objects;
 
 
 public final class MythicParties extends JavaPlugin implements Listener {
@@ -35,7 +38,7 @@ public final class MythicParties extends JavaPlugin implements Listener {
     private static MythicParties plugin;
     @Override
     public void onLoad(){
-        if(!Bukkit.getPluginManager().isPluginEnabled("WorldGuard")) return;
+        if(Bukkit.getPluginManager().getPlugin("WorldGuard") == null) getLogger().info("load");
         FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
         IntegerFlag flag = new IntegerFlag("party-limit-flag");
         registry.register(flag);
@@ -60,12 +63,13 @@ public final class MythicParties extends JavaPlugin implements Listener {
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(0), true, true);
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(1), true, true);
         partyService = new PartyService(this, configParser);
+
         getServer().getPluginManager().registerEvents(this, this);
         Bukkit.getOnlinePlayers().forEach((player) -> partyService.createParty(player));
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new PlaceHolderExpansion(partyService).register();
         }
-        if(!Bukkit.getPluginManager().isPluginEnabled("WorldGuard")) return;
+        if(!Bukkit.getPluginManager().isPluginEnabled("WorldGuard")) getLogger().info("load");
         SessionManager sessionManager = WorldGuard.getInstance().getPlatform().getSessionManager();
         sessionManager.registerHandler(FlagHandler.FACTORY, null);
     }
@@ -88,5 +92,12 @@ public final class MythicParties extends JavaPlugin implements Listener {
         Player p = event.getPlayer();
         partyService.scheduleDisband(p, false);
         partyService.scheduleKick(p, false);
+    }
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPVP(EntityDamageByEntityEvent event){
+        if(event.getDamager().getType() != EntityType.PLAYER && event.getEntity().getType() != EntityType.PLAYER) return;
+        Player damager = (Player) event.getDamager();
+        Player damaged = (Player) event.getEntity();
+        if(Objects.equals(partyService.getPartyID(damager), partyService.getPartyID(damaged))) event.setCancelled(FlagHandler.getFFOffSet().contains(event.getEntity().getUniqueId()));
     }
 }

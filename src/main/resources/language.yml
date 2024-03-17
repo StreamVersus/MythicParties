@@ -1,31 +1,31 @@
 # https://docs.advntr.dev/minimessage/index.html
-leave_leader:
-leave_no_party:
-invite_non_leader:
-invite_no_player:
-invite_already_invited:
-invite_alert: $button_accept$ - $button_refuse$
-invite_party_full:
-invite_accepted:
-invite_refused:
-givelead_non_leader:
-givelead_no_player:
-givelead_alert:
-kick_alert:
-kick_non_leader:
-kick_no_player:
-disband_non_leader:
-disband_alert:
-swap_non_leader:
-swap_wrong_args:
-accept_no_invites:
-accept_wrong_args:
+leave_leader: <i[:true]><red>Вы - лидер\nЛидеры не могут покидать команду!</red><!i>
+leave_no_party: <i[:true]><red>Вы не состоите в команде!</red><!i>
+invite_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
+invite_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
+invite_already_invited: <i[:true]><purple>Кто-то уже пригласил данного игрока!</purple><!i>
+invite_alert: <i[:true]> $button_accept$ - $button_refuse$ <!i>
+invite_party_full: <i[:true]><red>Ваша команда заполнена!</red><!i>
+invite_accepted: <i[:true]><green>Игрок $player_invited$ вступил в команду</green><!i>
+invite_refused: <i[:true]><red>Игрок $player_invited$ отказался от вступления в команду</red><!i>
+givelead_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
+givelead_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
+givelead_alert: <i[:true]><purple>Теперь вы лидер!</purple><!i>
+kick_alert: <i[:true]><purple>Вы были выгнанны из команды</purple><!i>
+kick_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
+kick_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
+disband_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
+disband_alert: <i[:true]><purple>Команда была распущена</purple><!i>
+swap_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
+swap_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
+accept_no_invites: <i[:true]><red>Вас еще не приглашали!</red><!i>
+accept_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
 
-help:
+help: <i[:true]><orange>Это плагин на команды!</orange><!i>
 button_accept: <green>Принять</green>
 button_refuse: <red>Отказать</red>
 
-wrong_subtag:
-command_wrong_args:
-command_fail:
+wrong_subtag: <i[:true]><red>Неверный под-тег!</red><!i>
+command_wrong_args: <i[:true]><red>Что-то не так с командой!</red><!i>
+command_fail: <i[:true]><red>Указанная команда не сработала!</red><!i>
 

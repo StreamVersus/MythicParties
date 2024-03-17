@@ -1,8 +1,8 @@
 package ru.streamversus.mythicparties;
 
 import dev.jorel.commandapi.CommandAPICommand;
-import dev.jorel.commandapi.arguments.IntegerArgument;
 import dev.jorel.commandapi.arguments.PlayerArgument;
+import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +38,7 @@ public class CommandRegister {
                 .withPermission("MysticParties." + commandName + "." + name)
                 .executes((sender, args) -> {commandHandler(consumer, name, sender, args);});
         if(playerArg) c.withArguments(new PlayerArgument("playerArg"));
-        if(slotArg) c.withArguments(new IntegerArgument("slotArg"));
+        if(slotArg) c.withArguments(new StringArgument("slotArg").includeSuggestions(PartyService.getSlotSuggestor()));
         nameList.add(name);
         return c;
     }

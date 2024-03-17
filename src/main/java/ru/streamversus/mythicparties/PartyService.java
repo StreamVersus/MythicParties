@@ -16,6 +16,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.*;
@@ -24,6 +25,9 @@ import java.util.function.Consumer;
 
 public class PartyService {
     private final Plugin plugin;
+    @Getter
+    private static ArgumentSuggestions<CommandSender> slotSuggestor = null;
+    private final ArgumentSuggestions<CommandSender> subTagSuggestor;
     private final Map<UUID, BukkitTask> disbandTask = new HashMap<>(), kickTask = new HashMap<>();
     private final ConfigParser config;
     private final CommandRegister partycommandRegister, partyadmincommandRegister;
@@ -34,6 +38,53 @@ public class PartyService {
         this.plugin = plugin;
         this.partycommandRegister = new CommandRegister(config.getCommandNameList().get(0), config);
         this.partyadmincommandRegister = new CommandRegister(config.getCommandNameList().get(1), config);
+        slotSuggestor = ArgumentSuggestions.strings(info -> {
+            if(Objects.equals(info.currentArg(), "all")) return new String[]{"all"};
+            String subtag = (String) info.previousArgs().get("subtag");
+            if(subtag == null) return null;
+            Party party = parsesubTag(subtag, (Player) info.sender());
+            String[] raw = {""};
+            if(!info.currentArg().isEmpty()) raw[0] = "all/";
+            String currentinput = info.currentArg();
+            if(currentinput.startsWith("a")) return new String[]{"all"};
+            party.forEach((player) -> {
+                String id = String.valueOf(getPlayerID(player));
+                if(id == null) return;
+                if(currentinput.contains(id)) return;
+                raw[0] = raw[0] + "/" + id;
+            });
+            return raw;}
+        );
+        subTagSuggestor = ArgumentSuggestions.strings(info -> {
+            String currentArg = info.currentArg();
+            if(currentArg.contains("@i")) {
+                int id = Party.idList.toArray().length;
+                if (id > 9) id = 9;
+                List<String> retval = new ArrayList<>();
+                for (int i = 0; i < id; i++) {
+                    retval.add("@id_" + i);
+                }
+                return retval.toArray(String[]::new);
+            }
+            if(currentArg.contains("@p")){
+                List<String> retval = new ArrayList<>();
+                Collection<? extends Player> playerList = Bukkit.getOnlinePlayers();
+                int l = playerList.size();
+                if(l > 9) l = 9;
+                for (int i = 0; i < l; i++) {
+                    retval.add("@player_" + playerList.toArray()[i]);
+                }
+                return retval.toArray(String[]::new);
+            }
+            if(currentArg.contains("@t")){
+                return new String[]{"@trugger_team"};
+            }
+            String[] retval = new String[3];
+            retval[0] = "@trugger_team";
+            retval[1] = "@id_*";
+            retval[2] = "@player_*";
+            return retval;
+        });
         commandParty();
         commandParty_a();
     }
@@ -82,7 +133,7 @@ public class PartyService {
         if(party.getLimit() < party.getPlayerCount()+2) return config.sendMessage(p, "invite_party_full");
         if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return config.sendMessage(p, "invite_already_invited");
         invitedMap.put(invitedPlayer.getUniqueId(), party);
-        config.sendMessage(invitedPlayer, "invite_alert");
+        config.sendInvite(p, "invite_alert", invitedPlayer);
         return true;
     }
 
@@ -180,21 +231,21 @@ public class PartyService {
         if(subtag.equals("trugger_party")) party = partyMap.get(sender.getUniqueId());
         else if(subtag.matches("id_.*")) {
             Integer partyId = Integer.parseInt(subtag.substring(3));
-            if(partyId > Party.getPartyCount()) throw new NullPointerException(); config.sendMessage(sender, "wrong_subtag");
+            if(partyId > Party.getPartyCount()) config.sendMessage(sender, "wrong_subtag");
             party = Party.getPartyByID(partyId);
         } else if (subtag.matches("player_.*")) {
             Player p = Bukkit.getPlayer(subtag.substring(7));
-            if(p == null) throw new NullPointerException(); config.sendMessage(sender, "wrong_subtag");
+            if(p == null) {config.sendMessage(sender, "wrong_subtag"); throw new NullPointerException();}
             party = partyMap.get(p.getUniqueId());
-        } else throw new NullPointerException(); config.sendMessage(sender, "wrong_subtag");
+        } else throw new NullPointerException();
         return party;
     }
     private void commandParty_a(){
         CommandAPICommand command = partyadmincommandRegister.getCommand();
         CommandAPICommand teleport = new CommandAPICommand("teleport") {{
             withPermission("MysticParties.party_a.teleport");
-            withArguments(new StringArgument("subtag"));
-            withArguments(new StringArgument("slots"));
+            withArguments(new StringArgument("subtag").includeSuggestions(subTagSuggestor));
+            withArguments(new StringArgument("slots").includeSuggestions(slotSuggestor));
             withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
             withArguments(new RotationArgument("rotation"));
             withArguments(new WorldArgument("world"));
@@ -229,8 +280,8 @@ public class PartyService {
         }};
         CommandAPICommand execute = new CommandAPICommand("command"){{
             withPermission("MysticParties.party_a.command");
-            withArguments(new StringArgument("subtag"));
-            withArguments(new StringArgument("slots"));
+            withArguments(new StringArgument("subtag").includeSuggestions(subTagSuggestor));
+            withArguments(new StringArgument("slots").includeSuggestions(slotSuggestor));
             withArguments(new GreedyStringArgument("command"));
             executes((sender, args) -> {
                 List<Player> executeList = new ArrayList<>();
@@ -357,7 +408,9 @@ class Party {
         }
     }
     private void updateLimit(){
-        maxPlayer = config.getLimit();
+        Integer limit = FlagHandler.getLimitMap().get(leaderUUID);
+        System.out.println(limit == null ? config.getLimit() : limit);
+        maxPlayer = limit == null ? config.getLimit() : limit;
     }
     public static Party getPartyByID(Integer id){return idList.get(id);}
     public static Integer getPartyCount(){return idList.toArray().length-1;}

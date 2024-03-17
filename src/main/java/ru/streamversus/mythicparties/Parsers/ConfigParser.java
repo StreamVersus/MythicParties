@@ -109,6 +109,13 @@ public class ConfigParser {
         p.sendMessage(replaced);
         return true;
     }
+    public boolean sendInvite(Player p, String key, Player invited){
+        String raw = langmap.get(key);
+        if(raw == null) return false;
+        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_sender\\$", p.getName()).replaceAll("\\$player_invited\\$", invited.getName()));
+        invited.sendMessage(replaced);
+        return true;
+    }
     public Message getMessage(String key){
         return new LiteralMessage(langmap.get(key));
     }
