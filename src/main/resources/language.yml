@@ -4,7 +4,7 @@ leave_no_party: <i[:true]><red>Вы не состоите в команде!</re
 invite_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
 invite_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
 invite_already_invited: <i[:true]><purple>Кто-то уже пригласил данного игрока!</purple><!i>
-invite_alert: <i[:true]> $button_accept$ - $button_refuse$ <!i>
+invite_alert: <i[:true]>Вас пригласил игрок $player_sender$ в команду\n$button_accept$ - $button_refuse$ <!i>
 invite_party_full: <i[:true]><red>Ваша команда заполнена!</red><!i>
 invite_accepted: <i[:true]><green>Игрок $player_invited$ вступил в команду</green><!i>
 invite_refused: <i[:true]><red>Игрок $player_invited$ отказался от вступления в команду</red><!i>
@@ -13,7 +13,7 @@ givelead_no_player: <i[:true]><red>Таког игрока не существу
 givelead_alert: <i[:true]><purple>Теперь вы лидер!</purple><!i>
 kick_alert: <i[:true]><purple>Вы были выгнанны из команды</purple><!i>
 kick_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
-kick_no_player: <i[:true]><red>Таког игрока не существует!</red><!i>
+kick_no_player: <i[:true]><red>Такого игрока не существует!</red><!i>
 disband_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>
 disband_alert: <i[:true]><purple>Команда была распущена</purple><!i>
 swap_non_leader: <i[:true]><red>Вы не являетесь лидером!</red><!i>

@@ -187,7 +187,7 @@ public class PartyService {
         if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
         invitedMap.remove(sender.getUniqueId());
         leaderMap.get(invitesender.getUniqueId()).addPlayer(sender);
-        config.sendMessage(invitesender, "invite_accepted");
+        config.sendInvite(invitesender, "invite_accepted", sender);
         return true;
     }
     public boolean refuse(Player sender){
@@ -195,7 +195,7 @@ public class PartyService {
         Player invitesender = (Player) invitedMap.get(sender.getUniqueId()).getLeader();
         if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
         invitedMap.remove(sender.getUniqueId());
-        config.sendMessage(invitesender, "invite_refused");
+        config.sendInvite(invitesender, "invite_refused", sender);
         return true;
     }
     public boolean help(Player sender){
