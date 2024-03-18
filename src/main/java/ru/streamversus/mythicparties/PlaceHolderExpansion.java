@@ -44,13 +44,15 @@ public class PlaceHolderExpansion extends PlaceholderExpansion {
         else if(params.equalsIgnoreCase("leader_stats")){return partyService.isPlayerLeader(p) ? "Yes" : "No";}
         else if(params.equalsIgnoreCase("participant_stats")){return partyService.isPlayerParticipant(p) ? "Yes" : "No";}
         else{
-            if(params.matches("party_member_name_\\[.*]")){
-                return partyService.getPlayerName(p, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
-            } else if (params.matches("party_slot_\\[.*]_busy")){
+            if(params.matches("member_name_\\[.*]")){
+                String raw = partyService.getPlayerName(p, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
+                return raw.isEmpty() ? "%party_" + params + "%" : raw;
+            } else if (params.matches("slot_\\[.*]_busy")){
                 return partyService.isSlotBusy(p, Integer.valueOf(params.split("\\[")[1].split("]")[0])) ? "Yes" : "No";
-            } else if (params.matches("party_member_papi_\\[.*]_\\{.*}")){
+            } else if (params.matches("member_papi_\\[.*]_\\{.*}")){
                 Player p1 = partyService.getmember((Player) player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
-                String placeholder = params.split("\\{")[1].split("}")[0] + params.split("\\[")[1].split("]")[0];
+                if(p1 == null) return "%party_" + params + "%";
+                String placeholder = params.split("\\{")[1].split("}")[0];
                 return PlaceholderAPI.setPlaceholders(p1, "%"+placeholder+"%");
             } else return null;
         }

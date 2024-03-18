@@ -118,7 +118,7 @@ public class PartyService {
         return leaderMap.get(p.getUniqueId()) == null;
     }
     public boolean leave(Player p) {
-        if(leaderMap.get(p.getUniqueId()) != null) return config.sendMessage(p, "leave_leader");
+        if(leaderMap.containsKey(p.getUniqueId())) return config.sendMessage(p, "leave_leader");
         Party party = partyMap.get(p.getUniqueId());
         if(party == null) return config.sendMessage(p, "leave_no_party");
         party.removePlayer(p);
@@ -474,13 +474,7 @@ class Party {
         }
     }
     private void updateLimit(){
-        if(MythicParties.getCompHandler() == null) {
-            maxPlayer = config.getLimit();
-        }
-        else {
-            Integer limit = MythicParties.getCompHandler().getLimit(leaderUUID);
-            maxPlayer = limit == null ? config.getLimit() : limit;
-        }
+        maxPlayer = FlagHandler.getLimitMap().get(leaderUUID) == null ? config.getLimit() : FlagHandler.getLimitMap().get(leaderUUID);
     }
     public static Party getPartyByID(Integer id){return idList.get(id);}
     public static Integer getPartyCount(){return idList.toArray().length-1;}
@@ -513,7 +507,16 @@ class Party {
         playerUUIDs.forEach(uuid -> players.add(Bukkit.getPlayer(uuid)));
         return players;
     }
-    public Player getPlayer(int id){return Bukkit.getPlayer(playerUUIDs.get(id-1));}
+    public Player getPlayer(int id){
+        UUID uuid;
+        try {
+         uuid = playerUUIDs.get(id - 1);
+        } catch(IndexOutOfBoundsException e){
+            uuid = null;
+        }
+        if(uuid == null) return null;
+        return Bukkit.getPlayer(uuid);
+    }
     public void swapPlayers(Player p, Player m){
         int firstindex = playerUUIDs.indexOf(p.getUniqueId());
         int secondindex = playerUUIDs.indexOf(m.getUniqueId());

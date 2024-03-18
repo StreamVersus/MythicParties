@@ -83,7 +83,7 @@ public class ConfigParser {
         String soundName = soundMap.get(name);
         if (soundName == null) return;
         String[] split = soundName.split(" ");
-        p.playSound(p, Sound.valueOf(split[0]), Float.parseFloat(split[1]), Float.parseFloat(split[2]));
+        p.playSound(p, split[0], Float.parseFloat(split[1]), Float.parseFloat(split[2]));
     }
 
     public boolean getVerbose() {

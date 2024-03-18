@@ -10,8 +10,10 @@ global_max_limit: 3
 #название_команды: название_звука громкость питч
 sound_notification:
   invite:
-  invite_accepted:
-  invite_is_not_accepted:
+  invite_accepted_inviter:
+  invite_accepted_invited:
+  invite_refused_inviter:
+  invite_refused_invited:
   kick:
   disband:
   slotplayer:

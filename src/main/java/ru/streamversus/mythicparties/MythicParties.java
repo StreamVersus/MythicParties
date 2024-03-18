@@ -1,21 +1,29 @@
 package ru.streamversus.mythicparties;
 
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.flags.IntegerFlag;
+import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
+import com.sk89q.worldguard.session.SessionManager;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPIBukkit;
 import dev.jorel.commandapi.CommandAPIBukkitConfig;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 
 import java.io.File;
+import java.util.Objects;
 
 
 public final class MythicParties extends JavaPlugin implements Listener {
@@ -25,11 +33,19 @@ public final class MythicParties extends JavaPlugin implements Listener {
     @Getter
     private static MythicParties plugin;
     @Getter
-    private static CompatibilityHandler compHandler;
+    private static IntegerFlag limitFlag;
+    @Getter
+    private static StateFlag FFFlag;
     @Override
     public void onLoad(){
-        if(Bukkit.getPluginManager().getPlugin("WorldGuard") == null) return;
-        compHandler = new CompatibilityHandler(this);
+        FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
+        IntegerFlag flag = new IntegerFlag("party-limit-flag");
+        registry.register(flag);
+        limitFlag = flag;
+
+        StateFlag flag2 = new StateFlag("party-friendly-fire", true);
+        registry.register(flag2);
+        FFFlag = flag2;
     }
     @Override
     public void onEnable() {
@@ -52,8 +68,8 @@ public final class MythicParties extends JavaPlugin implements Listener {
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new PlaceHolderExpansion(partyService).register();
         }
-        if(Bukkit.getPluginManager().getPlugin("WorldGuard") == null) return;
-        compHandler.onEnable(partyService);
+        SessionManager sessionManager = WorldGuard.getInstance().getPlatform().getSessionManager();
+        sessionManager.registerHandler(FlagHandler.FACTORY, null);
     }
 
     @Override
@@ -74,5 +90,12 @@ public final class MythicParties extends JavaPlugin implements Listener {
         Player p = event.getPlayer();
         partyService.scheduleDisband(p, false);
         partyService.scheduleKick(p, false);
+    }
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPVP(EntityDamageByEntityEvent event){
+        if(event.getDamager().getType() != EntityType.PLAYER && event.getEntity().getType() != EntityType.PLAYER) return;
+        Player damager = (Player) event.getDamager();
+        Player damaged = (Player) event.getEntity();
+        if(Objects.equals(partyService.getPartyID(damager), partyService.getPartyID(damaged))) event.setCancelled(FlagHandler.getFFOffSet().contains(event.getEntity().getUniqueId()));
     }
 }
