@@ -4,38 +4,64 @@ import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.*;
 import dev.jorel.commandapi.executors.CommandArguments;
 import dev.jorel.commandapi.wrappers.Rotation;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
-import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
-public class PartyService {
+public class
+PartyService {
     private final Plugin plugin;
-    private static ArgumentSuggestions<CommandSender> slotSuggestor = null;
-    private final ArgumentSuggestions<CommandSender> subTagSuggestor;
+    static ArgumentSuggestions<CommandSender> playerSuggestor, teamplayerSuggestor;
+    private final ArgumentSuggestions<CommandSender> subTagSuggestor, slotSuggestor;
     private final Map<UUID, BukkitTask> disbandTask = new HashMap<>(), kickTask = new HashMap<>();
     private final ConfigParser config;
     private final CommandRegister partycommandRegister, partyadmincommandRegister;
     private final Map<UUID, Party> leaderMap = new HashMap<>(), partyMap = new HashMap<>(), invitedMap = new HashMap<>();
+    private final ProxyHandler proxy;
 
-    PartyService(Plugin plugin, ConfigParser config) {
+    PartyService(Plugin plugin, ConfigParser config, ProxyHandler proxy) {
         this.config = config;
         this.plugin = plugin;
+        this.proxy = proxy;
+        proxy.connectService(this);
         this.partycommandRegister = new CommandRegister(config.getCommandNameList().get(0), config, this);
         this.partyadmincommandRegister = new CommandRegister(config.getCommandNameList().get(1), config, this);
+        playerSuggestor = ArgumentSuggestions.strings(info -> {
+            List<String> playerList = proxy.getPlayerList();
+            playerList.remove(info.sender().getName());
+            List<String> retval = new ArrayList<>();
+            if(info.currentArg().isEmpty()){
+                int index = playerList.size();
+                if(index > 10) index = 10;
+                return playerList.subList(0, index).toArray(String[]::new);
+            }
+            playerList.forEach(string -> {
+                if(string.matches(info.currentArg() + ".*")){
+                    retval.add(string);
+                }
+            });
+            return retval.toArray(String[]::new);
+        });
+        teamplayerSuggestor = ArgumentSuggestions.strings(info -> {
+            Player p = (Player) info.sender();
+            List<String> retval = new ArrayList<>();
+            for (OfflinePlayer player : partyMap.get(p.getUniqueId()).getPlayers()) {
+                retval.add(player.getName());
+            }
+            retval.remove(p.getName());
+            return retval.toArray(String[]::new);
+        });
         slotSuggestor = ArgumentSuggestions.strings(info -> {
             if(Objects.equals(info.currentArg(), "all")) return new String[]{"all"};
             String subtag = (String) info.previousArgs().get("subtag");
@@ -51,12 +77,13 @@ public class PartyService {
                 if(currentinput.contains(id)) return;
                 raw[0] = raw[0] + "/" + id;
             });
-            return raw;}
+            return raw;
+        }
         );
         subTagSuggestor = ArgumentSuggestions.strings(info -> {
             String currentArg = info.currentArg();
             if(currentArg.contains("i")) {
-                int id = Party.idList.toArray().length;
+                int id = Party.idMap.idSet().size();
                 if (id > 9) id = 9;
                 List<String> retval = new ArrayList<>();
                 for (int i = 0; i < id; i++) {
@@ -77,10 +104,10 @@ public class PartyService {
                 return retval.toArray(String[]::new);
             }
             if(currentArg.contains("t")){
-                return new String[]{"trugger_team"};
+                return new String[]{"trugger_party"};
             }
             String[] retval = new String[3];
-            retval[0] = "trugger_team";
+            retval[0] = "trugger_party";
             retval[1] = "id_*";
             retval[2] = "player_*";
             return retval;
@@ -88,28 +115,50 @@ public class PartyService {
         commandParty();
         commandParty_a();
     }
-    public void scheduleDisband(Player p, boolean disable){
+    public void scheduleDisband(OfflinePlayer p, boolean disable){
+        if(proxy.getServerList().contains(p.getName())) return;
         if(!config.isDisband()) return;
         Party party = leaderMap.get(p.getUniqueId());
         if(party == null) return;
         if(disable) {BukkitTask t = disbandTask.remove(p.getUniqueId());
             if(t == null) return;
             t.cancel();}
-        else disbandTask.put(p.getUniqueId(), plugin.getServer().getScheduler().runTaskTimer(plugin, () -> disband(p), config.getLeaderDisband(), 0L));
+        else {
+            disbandTask.put(p.getUniqueId(), plugin.getServer().getScheduler().runTaskTimer(plugin, () -> leaveDisband(p), config.getLeaderDisband(), 0L));
+            party.forEach(player -> proxy.sendMessage(player.getUniqueId(), "leader_offline"));
+        }
     }
-    public void scheduleKick(Player p, boolean disable){
+    private void leaveDisband(OfflinePlayer p){
+        Party party = leaderMap.remove(p.getUniqueId());
+        disband(p);
+        party.destroy();
+        scheduleDisband(p, true);
+    }
+    public void scheduleKick(OfflinePlayer p, boolean disable){
+        if(proxy.getServerList().contains(p.getName())) return;
         Party party = partyMap.get(p.getUniqueId());
         if(party == null) return;
         if(disable) {BukkitTask t = kickTask.remove(p.getUniqueId());
             if(t == null) return;
             t.cancel();}
-        else kickTask.put(p.getUniqueId(), plugin.getServer().getScheduler().runTaskTimer(plugin, () -> kick(p), config.getPlayerKick(), 0L));
+        else {
+            kickTask.put(p.getUniqueId(), plugin.getServer().getScheduler().runTaskTimer(plugin, () -> scheduledkick(p), config.getPlayerKick(), 0L));
+            party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(),"player_offline", p.getName()));
+        }
     }
     public void createParty(Player p) {
         if(leaderMap.get(p.getUniqueId()) != null || partyMap.get(p.getUniqueId()) != null) return;
         UUID id = p.getUniqueId();
         if (leaderMap.get(id) != null) return;
-        Party party = new Party(id, plugin, config);
+        Party party = new Party(id, plugin, config, proxy);
+        leaderMap.put(id, party);
+        partyMap.put(id, party);
+    }
+
+    public void createParty(UUID id) {
+        if(leaderMap.get(id) != null || partyMap.get(id) != null) return;
+        if (leaderMap.get(id) != null) return;
+        Party party = new Party(id, plugin, config, proxy);
         leaderMap.put(id, party);
         partyMap.put(id, party);
     }
@@ -117,99 +166,122 @@ public class PartyService {
     public boolean isntLeader(Player p) {
         return leaderMap.get(p.getUniqueId()) == null;
     }
-    public boolean leave(Player p) {
-        if(leaderMap.containsKey(p.getUniqueId())) return config.sendMessage(p, "leave_leader");
+    public boolean isntLeader(OfflinePlayer p) {
+        return leaderMap.get(p.getUniqueId()) == null;
+    }
+    public boolean leave(OfflinePlayer p) {
+        if(leaderMap.containsKey(p.getUniqueId())) return proxy.sendMessage(p.getUniqueId(), "leave_leader");
         Party party = partyMap.get(p.getUniqueId());
-        if(party == null) return config.sendMessage(p, "leave_no_party");
-        party.removePlayer(p);
+        if(party == null) return proxy.sendMessage(p.getUniqueId(), "leave_no_party");
+        party.removePlayer(p.getUniqueId());
+        createParty(p.getUniqueId());
+        party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), "leave_alert", p.getName()));
+        proxy.sendMessage(p.getUniqueId(), "leave_selfalert");
         return true;
     }
 
-    public boolean invite(Player p, CommandArguments args) {
-        if (isntLeader(p)) return config.sendMessage(p, "invite_non_leader");
-        Player invitedPlayer = (Player) args.get("playerArg");
-        if(p == invitedPlayer) return config.sendMessage(p, "invite_self");
-        if (invitedPlayer == null) return config.sendMessage(p, "invite_no_player");
+    public boolean invite(OfflinePlayer p, CommandArguments args) {
+        if (isntLeader(p)) return proxy.sendMessage(p.getUniqueId(), "invite_non_leader");
+        OfflinePlayer invitedPlayer = (OfflinePlayer) args.get("playerArg");
+        if(p == invitedPlayer) return proxy.sendMessage(p.getUniqueId(), "invite_self");
+        if (invitedPlayer == null) return proxy.sendMessage(p.getUniqueId(), "invite_no_player");
         Party party = leaderMap.get(p.getUniqueId());
-        if(party.getLimit() < party.getPlayerCount()+1) return config.sendMessage(p, "invite_party_full");
-        if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return config.sendMessage(p, "invite_already_invited");
+        if(party.getLimit() < party.getPlayerCount()+1) return proxy.sendMessage(p.getUniqueId(), "invite_party_full");
+        if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return proxy.sendMessage(p.getUniqueId(), "invite_already_invited");
         invitedMap.put(invitedPlayer.getUniqueId(), party);
-        config.sendInvite(p, "invite_alert", invitedPlayer);
+        proxy.sendWithReplacer(invitedPlayer.getUniqueId(),"invite_alert", p.getName());
+        party.forEach((player) -> proxy.sendWithReplacer(player.getUniqueId(), "invite_sended", invitedPlayer.getName()));
         return true;
     }
 
-    public boolean giveLead(Player p, CommandArguments args) {
-        if (isntLeader(p)) return config.sendMessage(p, "givelead_non_leader");
-        Player leadingPlayer = (Player) args.get("playerArg");
-        if (leadingPlayer == null) return config.sendMessage(p, "givelead_no_player");
+    public boolean giveLead(OfflinePlayer p, CommandArguments args) {
+        if (isntLeader(p)) return proxy.sendMessage(p.getUniqueId(), "givelead_non_leader");
+        OfflinePlayer leadingPlayer = (OfflinePlayer) args.get("playerArg");
+        if (leadingPlayer == null) return proxy.sendMessage(p.getUniqueId(), "givelead_no_player");
         Party party = leaderMap.remove(p.getUniqueId());
         leaderMap.put(leadingPlayer.getUniqueId(), party);
         party.changeLeaderUUID(leadingPlayer.getUniqueId());
-        config.sendMessage(leadingPlayer, "givelead_alert");
+        proxy.sendMessage(leadingPlayer.getUniqueId(), "givelead_alert");
+        proxy.sendWithReplacer(p.getUniqueId(),"givelead_selfalert", leadingPlayer.getName());
         return true;
     }
-    private void kick(Player p){
+    public void kick(OfflinePlayer p){
         Party party = partyMap.remove(p.getUniqueId());
-        party.removePlayer(p);
-        config.sendMessage(p, "kick_alert");
+        party.removePlayer(p.getUniqueId());
+        createParty(p.getUniqueId());
+        proxy.sendMessage(p.getUniqueId(), "kick_alert");
+        party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), p.getName(), "kick_selfalert"));
+    }
+    public void scheduledkick(OfflinePlayer p){
+        Party party = partyMap.remove(p.getUniqueId());
+        party.removePlayer(p.getUniqueId());
+        createParty(p.getUniqueId());
+        proxy.sendMessage(p.getUniqueId(), "kick_alert");
+        party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), p.getName(), "kick_selfalert"));
+        scheduleKick(p, true);
     }
     public boolean kickWrapper(Player p, CommandArguments args) {
-        if (isntLeader(p)) return config.sendMessage(p, "kick_non_leader");
+        if (isntLeader(p)) return proxy.sendMessage(p.getUniqueId(), "kick_non_leader");
         Player kickedPlayer = (Player) args.get("playerArg");
-        if (kickedPlayer == null) return config.sendMessage(p, "kick_no_player");
+        if (kickedPlayer == null) return proxy.sendMessage(p.getUniqueId(), "kick_no_player");
         kick(kickedPlayer);
+        proxy.sendWithReplacer(p.getUniqueId(),"kick_selfalert", kickedPlayer.getName());
         return true;
     }
-    public boolean disband(Player p) {
-        if (isntLeader(p)) return config.sendMessage(p, "disband_non_leader");
-        Party party = leaderMap.remove(p.getUniqueId());
-        party.forEach((player) -> {
-            if(player != p) partyMap.remove(player.getUniqueId());
+    public boolean disband(OfflinePlayer p) {
+        if (isntLeader(p)) return proxy.sendMessage(p.getUniqueId(), "disband_non_leader");
+        Party party = leaderMap.get(p.getUniqueId());
+        List<OfflinePlayer> kickList = party.getPlayers();
+        kickList.remove(p);
+        kickList.forEach(p1 -> {
+            Party pa = partyMap.remove(p1.getUniqueId());
+            pa.removePlayer(p1.getUniqueId());
+            createParty(p1.getUniqueId());
         });
-        invitedMap.forEach((key, value) -> {
-            if (value == party) invitedMap.remove(key);
-        });
-        party.forEach((player) -> config.sendMessage(player, "disband_alert"));
+        party.forEach((player) -> proxy.sendMessage(player.getUniqueId(), "disband_alert"));
         return true;
     }
-    public boolean swapSlots(Player send, CommandArguments args){
-        if(isntLeader(send)) return config.sendMessage(send, "swap_non_leader");
-        Player p = (Player) args.get("playerArg");
+    public boolean swapSlots(OfflinePlayer send, CommandArguments args){
+        if(isntLeader(send)) return proxy.sendMessage(send.getUniqueId(), "swap_non_leader");
+        OfflinePlayer p = (OfflinePlayer) args.get("playerArg");
         Party party = leaderMap.get(send.getUniqueId());
         Integer slot = (Integer) args.get("slotArg");
-        if(slot == null || p == null) return config.sendMessage(send, "swap_wrong_args");
-        if(slot == 1) return config.sendMessage(send, "swap_leader");
-        int i = party.getPlayerID(p);
-        if(i == -1) return config.sendMessage(send, "swap_empty_slot");
-        if(i == slot) return config.sendMessage(send, "swap_already");
-        Player m;
+        if(slot == null || p == null) return proxy.sendMessage(send.getUniqueId(), "swap_wrong_args");
+        if(slot == 1) return proxy.sendMessage(send.getUniqueId(), "swap_leader");
+        int i = party.getPlayerID(p.getUniqueId());
+        if(i == -1) return proxy.sendMessage(send.getUniqueId(), "swap_empty_slot");
+        if(i == slot) return proxy.sendMessage(send.getUniqueId(), "swap_already");
+        OfflinePlayer m;
         try {
             m = party.getPlayer(slot);
         } catch(Exception e){
-            return config.sendMessage(send, "swap_empty_slot");
+            return proxy.sendMessage(send.getUniqueId(), "swap_empty_slot");
         }
         party.swapPlayers(p, m);
         return true;
     }
     public boolean accept(Player sender){
-        if(!invitedMap.containsKey(sender.getUniqueId())) return config.sendMessage(sender, "accept_no_invites");
+        if(!invitedMap.containsKey(sender.getUniqueId())) return proxy.sendMessage(sender.getUniqueId(), "accept_no_invites");
         Player invitesender = (Player) invitedMap.get(sender.getUniqueId()).getLeader();
-        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
+        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args:");
         invitedMap.remove(sender.getUniqueId());
-        leaderMap.get(invitesender.getUniqueId()).addPlayer(sender);
-        config.sendInvite(invitesender, "invite_accepted", sender);
+        Party party = leaderMap.get(invitesender.getUniqueId());
+        party.addPlayer(sender);
+        party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), "invite_accepted", sender.getName()));
+        leaderMap.remove(sender.getUniqueId()).destroy();
+        partyMap.replace(sender.getUniqueId(), party);
         return true;
     }
     public boolean refuse(Player sender){
-        if(!invitedMap.containsKey(sender.getUniqueId())) return config.sendMessage(sender, "accept_no_invites");
+        if(!invitedMap.containsKey(sender.getUniqueId())) return proxy.sendMessage(sender.getUniqueId(), "accept_no_invites");
         Player invitesender = (Player) invitedMap.get(sender.getUniqueId()).getLeader();
-        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return config.sendMessage(sender, "accept_wrong_args:");
-        invitedMap.remove(sender.getUniqueId());
-        config.sendInvite(invitesender, "invite_refused", sender);
+        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args:");
+        invitedMap.remove(sender.getUniqueId()).forEach(player -> proxy.sendWithReplacer(player.getUniqueId(),"invite_refused", sender.getName()));
+        proxy.sendWithReplacer(sender.getUniqueId(),"invite_self_refused", invitesender.getName());
         return true;
     }
     public boolean help(Player sender){
-        return config.sendMessage(sender, "help");
+        return proxy.sendMessage(sender.getUniqueId(), "help");
     }
     private void commandParty(){
         Map<String, BiFunction<CommandSender, CommandArguments, Boolean>> submap = new HashMap<>(){{
@@ -225,6 +297,8 @@ public class PartyService {
         }};
         Map<String, Boolean> playerArgmap = new HashMap<>(){{
             put("invite", true);
+        }};
+        Map<String, Boolean> teamArgmap = new HashMap<>(){{
             put("givelead", true);
             put("kick", true);
             put("slotplayer", true);
@@ -234,27 +308,26 @@ public class PartyService {
         }};
         partycommandRegister.addSubPermissions();
         CommandAPICommand command = partycommandRegister.getCommand();
-        submap.forEach((name, executor)-> command.withSubcommand(partycommandRegister.addSubcommand(name, executor, playerArgmap.getOrDefault(name, false), slotArgmap.getOrDefault(name, false))));
+        submap.forEach((name, executor)-> command.withSubcommand(partycommandRegister.addSubcommand(name, executor, playerArgmap.getOrDefault(name, false), slotArgmap.getOrDefault(name, false), teamArgmap.getOrDefault(name, false))));
         partycommandRegister.registerCommand();
     }
-    private Party parsesubTag(String subtag, Player sender){
+    private Party parsesubTag(String subtag, OfflinePlayer sender){
         Party party;
         if(subtag.equals("trugger_party")) party = partyMap.get(sender.getUniqueId());
         else if(subtag.matches("id_.*")) {
             Integer partyId = Integer.parseInt(subtag.substring(3));
-            if(partyId > Party.getPartyCount()) config.sendMessage(sender, "wrong_subtag");
+            if(partyId > Party.getPartyCount()) proxy.sendMessage(sender.getUniqueId(), "wrong_subtag");
             party = Party.getPartyByID(partyId);
         } else if (subtag.matches("player_.*")) {
             Player p = Bukkit.getPlayer(subtag.substring(7));
-            if(p == null) {config.sendMessage(sender, "wrong_subtag"); throw new NullPointerException();}
+            if(p == null) {proxy.sendMessage(sender.getUniqueId(), "wrong_subtag"); throw new NullPointerException();}
             party = partyMap.get(p.getUniqueId());
         } else throw new NullPointerException();
         return party;
     }
-    private List<Player> parseSlots(String raw, Player p){
-        List<Player> retval = new ArrayList<>();
+    private List<OfflinePlayer> parseSlots(String raw, OfflinePlayer p){
+        List<OfflinePlayer> retval = new ArrayList<>();
         Party party = partyMap.get(p.getUniqueId());
-
         if(raw.equals("all")) {
             retval = party.getPlayers();
         }else{
@@ -264,12 +337,12 @@ public class PartyService {
                 try {
                  id = Integer.parseInt(s);
                 } catch (Exception e){
-                    config.sendMessage(p, "wrong_slots");
+                    proxy.sendMessage(p.getUniqueId(), "wrong_slots");
                     return null;
                 }
-                Player p1 = party.getPlayer(id);
+                OfflinePlayer p1 = party.getPlayer(id);
                 if(p1 == null) {
-                    config.sendMessage(p, "wrong_slots");
+                    proxy.sendMessage(p.getUniqueId(), "wrong_slots");
                     return null;
                 }
                 retval.add(p1);
@@ -277,8 +350,8 @@ public class PartyService {
         }
         return retval;
     }
-    private List<Player> parseSlots(String raw, Player p, Party party){
-        List<Player> retval = new ArrayList<>();
+    private List<OfflinePlayer> parseSlots(String raw, OfflinePlayer p, Party party){
+        List<OfflinePlayer> retval = new ArrayList<>();
 
         if(raw.equals("all")) {
             retval = party.getPlayers();
@@ -289,12 +362,12 @@ public class PartyService {
                 try {
                     id = Integer.parseInt(s);
                 } catch (Exception e){
-                    config.sendMessage(p, "wrong_slots");
+                    proxy.sendMessage(p.getUniqueId(), "wrong_slots");
                     return null;
                 }
-                Player p1 = party.getPlayer(id);
+                OfflinePlayer p1 = party.getPlayer(id);
                 if(p1 == null) {
-                    config.sendMessage(p, "wrong_slots");
+                    proxy.sendMessage(p.getUniqueId(), "wrong_slots");
                     return null;
                 }
                 retval.add(p1);
@@ -311,15 +384,17 @@ public class PartyService {
             withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
             withArguments(new RotationArgument("rotation"));
             withArguments(new WorldArgument("world"));
-            withArguments(new StringArgument("server"));
             executes((sender, args) -> {CommandWrapper2((Player) sender, args);});
         }};
+        if(!proxy.getServerList().isEmpty()){
+            teleport.withArguments(new StringArgument("server").replaceSuggestions(ArgumentSuggestions.strings(proxy.getServerList())));
+        }
         CommandAPICommand execute = new CommandAPICommand("command"){{
             withPermission("MysticParties.party_a.command");
             withArguments(new TextArgument("subtag").includeSuggestions(subTagSuggestor));
             withArguments(new TextArgument("slots").includeSuggestions(slotSuggestor));
             withArguments(new GreedyStringArgument("command"));
-            executes((sender, args) -> {CommandWrapper((Player) sender, args);});
+            executes((sender, args) -> {CommandWrapper((OfflinePlayer) sender, args);});
         }};
         CommandAPICommand reloadConfig = new CommandAPICommand("reloadConfig")
                 .withPermission("MysticParties.party_a.reloadconfig")
@@ -334,206 +409,95 @@ public class PartyService {
         } catch (IllegalArgumentException ignored) {}
         command.register();
     }
-    private void CommandWrapper(Player sender, CommandArguments args){
+    private void CommandWrapper(OfflinePlayer sender, CommandArguments args){
         String slot = (String) args.get("slots");
         assert slot != null;
-        List<Player> executeList = parseSlots(slot, sender);
+        List<OfflinePlayer> executeList = parseSlots(slot, sender);
         if(executeList == null){
-            config.sendMessage(sender, "wrong_subtag");
+            proxy.sendMessage(sender.getUniqueId(), "wrong_subtag");
             return;
         }
         String command = (String) args.get("command");
         if(command == null){
-            config.sendMessage(sender, "command_wrong_args");
+            proxy.sendMessage(sender.getUniqueId(), "command_wrong_args");
             return;
         }
         List<Boolean> buffer = new ArrayList<>();
-        for (Player player : executeList) {
-            buffer = Collections.singletonList(player.performCommand(command));
+        for (OfflinePlayer player : executeList) {
+            Player p = Bukkit.getPlayer(player.getUniqueId());
+
+            if(p != null) buffer = Collections.singletonList(proxy.executeAs(player.getUniqueId(), command));
         }
         if(buffer.contains(false)){
-            config.sendMessage(sender, "command_fail");
+            proxy.sendMessage(sender.getUniqueId(), "command_fail");
         }
     }
-    public void CommandWrapper2(Player sender, CommandArguments args){
+    public void CommandWrapper2(OfflinePlayer sender, CommandArguments args){
         Party party;
-        List<Player> teleportList;
+        List<OfflinePlayer> teleportList;
         String subtag = (String) args.get("subtag");
         assert subtag != null;
         try{
             party = parsesubTag(subtag, sender);
         }catch(Exception e){
-            config.sendMessage(sender, "wrong_subtag");
+            proxy.sendMessage(sender.getUniqueId(), "wrong_subtag");
             return;
         }
         String slot = (String) args.get("slots");
         assert slot != null;
         teleportList = parseSlots(slot, sender, party);
         if(teleportList == null){
-            config.sendMessage(sender, "wrong_slots");
+            proxy.sendMessage(sender.getUniqueId(), "wrong_slots");
             return;
         }
         Location tploc = (Location) args.get("location");
         Rotation rot = (Rotation) args.get("rotation");
+        World world = (World) args.get("world");
+        String server = (String) args.get("server");
         assert tploc != null;
         assert rot != null;
-        tploc.setYaw(rot.getYaw());
+        tploc.setWorld(world);
         tploc.setPitch(rot.getPitch());
-        System.out.println(teleportList);
-        teleportList.forEach((Player) -> Player.teleport(tploc));
+        tploc.setYaw(rot.getYaw());
+        if(server == null) server = "local";
+        proxy.teleportTo(sender.getUniqueId(), server, tploc);
     }
-    public Integer getPartyID(Player p){
+    public Integer getPartyID(OfflinePlayer p){
         return partyMap.get(p.getUniqueId()).getId();
     }
-    public String getLeaderName(Player p){
+    public String getLeaderName(OfflinePlayer p){
         return partyMap.get(p.getUniqueId()).getLeader().getName();
     }
-    public String getPlayerName(Player p, Integer i){
-        Player arg = partyMap.get(p.getUniqueId()).getPlayer(i);
+    public String getPlayerName(OfflinePlayer p, Integer i){
+        OfflinePlayer arg = partyMap.get(p.getUniqueId()).getPlayer(i);
         if(arg == null) return "";
         return arg.getName();
     }
-    public Integer getPartySize(Player p){
+    public Integer getPartySize(OfflinePlayer p){
         return partyMap.get(p.getUniqueId()).getPlayerCount();
     }
-    public Integer getFreeSlots(Player p){
+    public Integer getFreeSlots(OfflinePlayer p){
         Party party = partyMap.get(p.getUniqueId());
         return party.getLimit() - party.getPlayers().toArray().length;
     }
-    public Integer getPlayerID(Player p){
-        return partyMap.get(p.getUniqueId()).getPlayerID(p);
+    public Integer getPlayerID(OfflinePlayer p){
+        return partyMap.get(p.getUniqueId()).getPlayerID(p.getUniqueId());
     }
-    public Integer getPartyLimit(Player p){
+    public Integer getPartyLimit(OfflinePlayer p){
         return partyMap.get(p.getUniqueId()).getLimit();
     }
-    public Boolean isSlotBusy(Player p, Integer i){
+    public Boolean isSlotBusy(OfflinePlayer p, Integer i){
         return partyMap.get(p.getUniqueId()).getPlayer(i) != null;
     }
-    public Boolean isPlayerLeader(Player p){
+    public Boolean isPlayerLeader(OfflinePlayer p){
         return leaderMap.get(p.getUniqueId()) != null;
     }
-    public Boolean isPlayerParticipant(Player p){
+    public Boolean isPlayerParticipant(OfflinePlayer p){
         if(leaderMap.get(p.getUniqueId()) != null) return false;
         return partyMap.get(p.getUniqueId()) != null;
     }
-    public Player getmember(Player p, Integer i){
-        return partyMap.get(p.getUniqueId()).getPlayer(i);
-    }
-}
-class Party {
-    private final ConfigParser config;
-    private int maxPlayer;
-    private static Class<?> clazz;
-    private static Boolean compatStatus;
-    private UUID leaderUUID;
-    private final List<UUID> playerUUIDs = new ArrayList<>();
-    @Getter
-    private final int id;
-    public static final List<Party> idList = new ArrayList<>();
-    Party(UUID leader, Plugin plugin, ConfigParser config) {
-        this.config = config;
-        updateLimit();
-        idList.add(this);
-        this.id = idList.indexOf(this);
-        this.leaderUUID = leader;
-        this.playerUUIDs.add(leader);
-        if(compatStatus == null) {
-            if (Bukkit.getPluginManager().isPluginEnabled("MythicDungeons")) {
-                compatStatus = false;
-            }else{
-                try {
-                    Class<?> mythic = Class.forName("net.playavalon.mythicdungeons.MythicDungeons");
-                    plugin.getLogger().info("test");
-                    Field f = mythic.getDeclaredField("plugin");
-                    f.setAccessible(true);
-                    compatStatus = ((String) mythic.getMethod("getPartyPluginName").invoke(f.get(null))).equalsIgnoreCase(plugin.getName());
-                } catch(Exception ignored){}
-            }
-            if(compatStatus == null) compatStatus = false;
-        }
-        if(compatStatus) {
-            try {
-                if (!Party.clazz.getName().equals("IDungeonParty"))
-                    Party.clazz = Class.forName("net.playavalon.mythicdungeons.api.party.IDungeonParty");
-            } catch(Exception ignored){}
-            Object party = Proxy.newProxyInstance(clazz.getClassLoader(),
-                    new Class[] {Party.clazz},
-                    (proxy, method, args) -> {
-                        switch (method.getName()) {
-                            case "addPlayer" -> addPlayer((Player) args[0]);
-                            case "removePlayer" -> removePlayer((Player) args[0]);
-                            case "getPlayers" -> {return getPlayers();}
-                            case "getLeader" -> getLeader();
-                            default -> throw new IllegalArgumentException("Proxy error!!!");
-                        }
-                        return null;
-                    });
-            try {
-                clazz.getMethod("initDungeonParty", Plugin.class).invoke(party, plugin);
-            }catch(Exception ignored){}
-        }
-    }
-    private void updateLimit(){
-        maxPlayer = FlagHandler.getLimitMap().get(leaderUUID) == null ? config.getLimit() : FlagHandler.getLimitMap().get(leaderUUID);
-    }
-    public static Party getPartyByID(Integer id){return idList.get(id);}
-    public static Integer getPartyCount(){return idList.toArray().length-1;}
-    public void addPlayer(Player player) {
-        playerUUIDs.add(player.getUniqueId());
-    }
-    public void forEach(Consumer<Player> cons) {
-        for (UUID p : playerUUIDs) {
-            cons.accept(Bukkit.getPlayer(p));
-        }
-    }
-    public int getPlayerID(Player p){
-        int i;
-        try{
-            i = playerUUIDs.indexOf(p.getUniqueId())+1;
-        } catch (Exception e){
-            return -1;
-        }
-        return i;
-    }
-    public int getLimit(){
-        updateLimit();
-        return maxPlayer;
-    }
-    public void removePlayer(Player player) {
-        playerUUIDs.remove(player.getUniqueId());
-    }
-    public List<Player> getPlayers() {
-        List<Player> players = new ArrayList<>();
-        playerUUIDs.forEach(uuid -> players.add(Bukkit.getPlayer(uuid)));
-        return players;
-    }
-    public Player getPlayer(int id){
-        UUID uuid;
-        try {
-         uuid = playerUUIDs.get(id - 1);
-        } catch(IndexOutOfBoundsException e){
-            uuid = null;
-        }
-        if(uuid == null) return null;
-        return Bukkit.getPlayer(uuid);
-    }
-    public void swapPlayers(Player p, Player m){
-        int firstindex = playerUUIDs.indexOf(p.getUniqueId());
-        int secondindex = playerUUIDs.indexOf(m.getUniqueId());
-        config.sendMessage(p, "swap_wrong_args");
-        if(firstindex == -1 || secondindex == -1) return;
-        playerUUIDs.remove(firstindex);
-        playerUUIDs.remove(secondindex);
-        playerUUIDs.add(secondindex, p.getUniqueId());
-        playerUUIDs.add(firstindex, m.getUniqueId());
-    }
-    public int getPlayerCount(){
-        return playerUUIDs.toArray().length;
-    }
-    public void changeLeaderUUID(UUID p) {leaderUUID = p;}
-    public @NotNull OfflinePlayer getLeader() {
-        Player p = Bukkit.getPlayer(leaderUUID);
-        assert p != null;
-        return p;
+    public Player getmember(OfflinePlayer p, Integer i){
+        OfflinePlayer p1 = partyMap.get(p.getUniqueId()).getPlayer(i);
+        return Bukkit.getPlayer(p1.getUniqueId());
     }
 }

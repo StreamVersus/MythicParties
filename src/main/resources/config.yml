@@ -4,6 +4,20 @@ commands_name:
   - party
   - party_a
 
+#Включение поддержки прокси
+#Для верной работы требуется:
+#spigot.yml -> bungeecord = true; даже для velocity
+#в конфиге velocity обязательно bungee-plugin-message-channel = true
+proxy_support: false
+
+#Необходимо для синхронизации команд между серверами
+#Необязательно при выключенном прокси
+mysql:
+  username:
+  password:
+  url:
+  name:
+
 global_max_limit: 3
 
 #https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Sound.html

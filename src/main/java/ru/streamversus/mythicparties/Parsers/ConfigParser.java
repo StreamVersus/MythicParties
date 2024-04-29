@@ -25,6 +25,10 @@ public class ConfigParser {
     private boolean disband;
     @Getter
     private long leaderDisband, playerKick;
+    @Getter
+    private boolean proxy;
+    @Getter
+    private String username, password, url, name;
 
     public ConfigParser(Plugin plugin, YamlConfiguration langconf) {
         this.langconfig = langconf;
@@ -36,6 +40,7 @@ public class ConfigParser {
     }
 
     private void precompileConfig() {
+        proxy = config.getBoolean("proxy_support");
         ConfigurationSection commandSection = config.getConfigurationSection("command_trigger");
         assert commandSection != null;
         commandSection.getKeys(false).forEach((string) -> {
@@ -57,6 +62,13 @@ public class ConfigParser {
         disband = disbandSection.getBoolean("disband");
         leaderDisband = disbandSection.getLong("leader");
         playerKick = disbandSection.getLong("participant");
+
+        ConfigurationSection database = config.getConfigurationSection("mysql");
+        assert database != null;
+        username = database.getString("username");
+        password = database.getString("password");
+        url = database.getString("url");
+        name = database.getString("name");
     }
     private void precompileLanguage(){
         langconfig.getKeys(false).forEach((key) -> {
@@ -73,6 +85,30 @@ public class ConfigParser {
             String rawRefuse = refuseTag + langconfig.getString("button_refuse") + "</click>";
             langmap.replace(name, content.replaceAll("\\$button_refuse\\$", rawRefuse));
         });
+        langmap.forEach((name, content) -> {
+            float raw = getLeaderDisband() / 20f;
+            String s = String.valueOf(raw);
+            s = s.contains(".") ? s.replaceAll("0*$","").replaceAll("\\.$","") : s;
+            langmap.replace(name, content.replaceAll("\\$disband_seconds\\$", s));
+        });
+        langmap.forEach((name, content) -> {
+            float raw = getLeaderDisband() / 20f / 60f;
+            String s = String.valueOf(raw);
+            s = s.contains(".") ? s.replaceAll("0*$","").replaceAll("\\.$","") : s;
+            langmap.replace(name, content.replaceAll("\\$disband_minutes\\$", s));
+        });
+        langmap.forEach((name, content) -> {
+            float raw = getPlayerKick() / 20f;
+            String s = String.valueOf(raw);
+            s = s.contains(".") ? s.replaceAll("0*$","").replaceAll("\\.$","") : s;
+            langmap.replace(name, content.replaceAll("\\$kick_seconds\\$", s));
+        });
+        langmap.forEach((name, content) -> {
+            float raw = getPlayerKick() / 20f / 60f;
+            String s = String.valueOf(raw);
+            s = s.contains(".") ? s.replaceAll("0*$","").replaceAll("\\.$","") : s;
+            langmap.replace(name, content.replaceAll("\\$kick_minutes\\$", s));
+        });
     }
 
     public String getCommand(boolean status, String name) {
@@ -83,7 +119,12 @@ public class ConfigParser {
         String soundName = soundMap.get(name);
         if (soundName == null) return;
         String[] split = soundName.split(" ");
-        p.playSound(p, split[0], Float.parseFloat(split[1]), Float.parseFloat(split[2]));
+        Sound sound = null;
+        try {
+            sound = Sound.valueOf(split[0]);
+        }catch(Exception ignored){}
+        if(sound == null) p.playSound(p, split[0], Float.parseFloat(split[1]), Float.parseFloat(split[2]));
+        else p.playSound(p, sound, Float.parseFloat(split[1]), Float.parseFloat(split[2]));
     }
 
     public boolean getVerbose() {
@@ -108,10 +149,11 @@ public class ConfigParser {
         p.sendMessage(replaced);
         return true;
     }
-    public void sendInvite(Player p, String key, Player invited){
+
+    public void sendWithReplacer(Player receiver, String invited, String key){
         String raw = langmap.get(key);
         if(raw == null) return;
-        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_sender\\$", p.getName()).replaceAll("\\$player_invited\\$", invited.getName()));
-        invited.sendMessage(replaced);
+        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_receiver\\$", receiver.getName()).replaceAll("\\$player_replacer\\$", invited));
+        receiver.sendMessage(replaced);
     }
 }

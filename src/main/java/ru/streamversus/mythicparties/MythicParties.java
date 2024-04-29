@@ -21,21 +21,27 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+import ru.streamversus.mythicparties.Proxy.ProxiedConnection;
+import ru.streamversus.mythicparties.Proxy.ProxyHandler;
+import ru.streamversus.mythicparties.database.partyList;
 
 import java.io.File;
 import java.util.Objects;
 
 
-public final class MythicParties extends JavaPlugin implements Listener {
+public final class MythicParties extends JavaPlugin implements Listener{
     private PartyService partyService;
     @Getter
-    private ConfigParser configParser;
+    private static ConfigParser configParser;
     @Getter
     private static MythicParties plugin;
     @Getter
     private static IntegerFlag limitFlag;
     @Getter
     private static StateFlag FFFlag;
+    @Getter
+    private static ProxyHandler handler;
+
     @Override
     public void onLoad(){
         FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
@@ -54,15 +60,24 @@ public final class MythicParties extends JavaPlugin implements Listener {
         if (!f.exists()) {
             this.saveResource("language.yml", false);
         }
-        this.configParser = new ConfigParser(this, YamlConfiguration.loadConfiguration(f));
+        configParser = new ConfigParser(this, YamlConfiguration.loadConfiguration(f));
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this)
                 .shouldHookPaperReload(true)
                 .silentLogs(configParser.getVerbose()));
         CommandAPI.onEnable();
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(0), true, true);
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(1), true, true);
-        partyService = new PartyService(this, configParser);
-
+        if(configParser.isProxy()){
+            if(!getServer().spigot().getConfig().getConfigurationSection("settings").getBoolean( "bungeecord" )){
+                getLogger().severe("Для корректной работы плагина с прокси, требуется включить поддержку Messaging BungeeCord(Даже для Velocity)");
+                getLogger().severe("для этого в spigot.yml поставьте значение bungeecord на true");
+                getLogger().severe("Производится отключение плагина");
+                getServer().getPluginManager().disablePlugin(this);
+            }
+        }
+        ProxyHandler proxyModule = new ProxiedConnection(plugin, configParser);
+        handler = proxyModule;
+        partyService = new PartyService(this, configParser, proxyModule);
         getServer().getPluginManager().registerEvents(this, this);
         Bukkit.getOnlinePlayers().forEach((player) -> partyService.createParty(player));
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
@@ -77,23 +92,25 @@ public final class MythicParties extends JavaPlugin implements Listener {
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(0), true, true);
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(1), true, true);
         CommandAPI.onDisable();
+        partyList.drop(handler.getConnect());
+        handler.disable();
     }
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event){
         Player p = event.getPlayer();
         partyService.createParty(p);
         partyService.scheduleKick(p, true);
         partyService.scheduleDisband(p, true);
     }
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLeave(PlayerQuitEvent event){
         Player p = event.getPlayer();
         partyService.scheduleDisband(p, false);
         partyService.scheduleKick(p, false);
     }
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPVP(EntityDamageByEntityEvent event){
-        if(event.getDamager().getType() != EntityType.PLAYER && event.getEntity().getType() != EntityType.PLAYER) return;
+        if(event.getDamager().getType() != EntityType.PLAYER || event.getEntity().getType() != EntityType.PLAYER) return;
         Player damager = (Player) event.getDamager();
         Player damaged = (Player) event.getEntity();
         if(Objects.equals(partyService.getPartyID(damager), partyService.getPartyID(damaged))) event.setCancelled(FlagHandler.getFFOffSet().contains(event.getEntity().getUniqueId()));

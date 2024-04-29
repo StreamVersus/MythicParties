@@ -6,6 +6,7 @@ prefix: MythicParties
 authors: [StreamVersus]
 description: Party plugin
 softdepend:
-  - WorldGuard
   - MythicDungeons
+depend:
+  - WorldGuard
   - PlaceholderAPI

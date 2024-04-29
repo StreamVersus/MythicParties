@@ -37,11 +37,11 @@ public class CommandRegister {
         }};
         commandName = name;
     }
-    public CommandAPICommand addSubcommand(String name, BiFunction<CommandSender, CommandArguments, Boolean> consumer, boolean playerArg, boolean slotArg){
+    public CommandAPICommand addSubcommand(String name, BiFunction<CommandSender, CommandArguments, Boolean> consumer, boolean playerArg, boolean slotArg, boolean teamArg){
         CommandAPICommand c = new CommandAPICommand(name)
                 .withPermission("MysticParties." + commandName + "." + name)
                 .executes((sender, args) -> {commandHandler(consumer, name, sender, args);});
-        if(playerArg) c.withArguments(new PlayerArgument("playerArg"));
+        if(playerArg) c.withArguments(new PlayerArgument("playerArg").replaceSuggestions(PartyService.playerSuggestor));
         if(slotArg) c.withArguments(new IntegerArgument("slotArg").includeSuggestions(ArgumentSuggestions.strings(info -> {
             int i = service.getPartySize((Player) info.sender());
             if(i>10) i = 10;
@@ -51,6 +51,7 @@ public class CommandRegister {
             }
             return retval.toArray(String[]::new);
         })));
+        if(teamArg) c.withArguments(new PlayerArgument("playerArg").replaceSuggestions(PartyService.teamplayerSuggestor));
         nameList.add(name);
         return c;
     }
@@ -59,7 +60,7 @@ public class CommandRegister {
             System.out.println("Plugin doesn't support executing commands from Console");
             return;
         }
-        if(!(name == null)) config.playSound(name, p);
+        if(!(name == null)) MythicParties.getHandler().playSound(p.getUniqueId(), name);
         boolean success = consumer.apply(sender, args);
         String command = config.getCommand(success, commandName+ "_" + name);
         if(Objects.equals(command, null)) return;

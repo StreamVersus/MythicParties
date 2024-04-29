@@ -3,36 +3,55 @@
 
 leave_leader: <i><b><red>Вы - лидер<br>Лидеры не могут покидать команду!</red></b></i>
 leave_no_party: <i><b><red>Вы не состоите в команде!</red></b></i>
+leave_alert: <i><b><light_purple>Игрок $player_replacer$ покинул команду</light_purple></b></i>
+leave_selfalert: <i><b><light_purple>Вы покинули команду</light_purple></b></i>
+
 invite_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
-invite_no_player: <i><b><red>Таког игрока не существует!</red></b></i>
+invite_no_player: <i><b><red>Такого игрока не существует!</red></b></i>
 invite_already_invited: <i><b><light_purple>Кто-то уже пригласил данного игрока!</light_purple></b></i>
-invite_alert: <i><b>Вас пригласил игрок $player_sender$ в команду<br>$button_accept$ - $button_refuse$ </b></i>
+invite_alert: <i><b>Вас пригласил игрок $player_replacer$ в команду<br>$button_accept$ - $button_refuse$ </b></i>
 invite_party_full: <i><b><red>Ваша команда заполнена!</red></b></i>
 invite_self: <i><b><red>Вы не можете пригласить самого себя!</red></b></i>
-invite_accepted: <i><b><green>Игрок $player_invited$ вступил в команду</green></b></i>
-invite_refused: <i><b><red>Игрок $player_invited$ отказался от вступления в команду</red></b></i>
+invite_sended: <i><b><light_purple>Игрок $player_replacer$ был приглашен в команду</light_purple></b></i>
+invite_accepted: <i><b><green>Игрок $player_replacer$ вступил в команду</green></b></i>
+invite_refused: <i><b><red>Игрок $player_replacer$ отказался от вступления в команду</red></b></i>
+invite_self_refused: <i><b><red>Вы отказались от вступления в команду игрока $player_replacer$</red></b></i>
+
 givelead_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
-givelead_no_player: <i><b><red>Таког игрока не существует!</red></b></i>
-givelead_alert: <i><b><light_purple>Теперь вы лидер!</light_purple></b></i>
-kick_alert: <i><b><light_purple>Вы были выгнанны из команды</light_purple></b></i>
+givelead_no_player: <i><b><red>Такого игрока не существует!</red></b></i>
+givelead_alert: <i><b><light_purple>Теперь вы - лидер команды</light_purple></b></i>
+givelead_selfalert: <i><b><light_purple>Вы передали лидерство игроку $player_replacer$</light_purple></b></i>
+
 kick_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
 kick_no_player: <i><b><red>Такого игрока не существует!</red></b></i>
+kick_alert: <i><b><light_purple>Вы были выгнанны из команды</light_purple></b></i>
+kick_selfalert: <i><b><light_purple>Игрок $player_replacer$ был выгнан из команды</light_purple></b></i>
+
 disband_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
 disband_alert: <i><b><light_purple>Команда была распущена</light_purple></b></i>
+
 swap_already: <i><b><light_purple>Игрок уже находится в этом слоте</light_purple></b></i>
 swap_leader: <i><b><red>Вы не можете переместить игрока на место лидера!</red></b></i>
 swap_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
 swap_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
 swap_empty_slot: <i><b><red>Этот слот пустой!</red></b></i>
+
 accept_no_invites: <i><b><red>Вас еще не приглашали!</red></b></i>
 accept_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
+
 
 help: <i><b><yellow>Это плагин на команды!</yellow></b></i>
 button_accept: <green>Принять</green>
 button_refuse: <red>Отказать</red>
 
+# $disband_minutes$ - $disband_seconds$
+# $kick_minutes$ - $kick_seconds$
+leader_offline: <i><b><light_purple>Лидер этой команды покинул игру<br>У него есть $disband_minutes$ минут на переподключение, или команда распадется</light_purple></b></i>
+player_offline: <i><b><light_purple>Игрок $player_replacer$ этой команды покинул игру<br>У него есть $kick_minutes$ минут на переподключение</light_purple></b></i>
+
 wrong_subtag: <i><b><red>Неверный под-тег!</red></b></i>
 wrong_slots: <i><b><red>Неверный слоты!</red></b></i>
+
 command_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
 command_fail: <i><b><red>Указанная команда не сработала!</red></b></i>
 

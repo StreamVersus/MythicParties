@@ -1,0 +1,125 @@
+package ru.streamversus.mythicparties.database;
+
+import lombok.SneakyThrows;
+import ru.streamversus.mythicparties.Party;
+import ru.streamversus.mythicparties.Proxy.ProxyHandler;
+import ru.streamversus.mythicparties.Utilities.util;
+
+import java.sql.*;
+import java.util.*;
+
+public class partyList {
+    private final Connection connect;
+    private static boolean local = false;
+    private final Map<Integer, Party> localMap = new HashMap<>();
+
+    @SneakyThrows
+    public partyList(ProxyHandler proxy){
+        this.connect = proxy.getConnect();
+        if(connect == null){
+            local = true;
+            System.out.println("111");
+        }
+        else {
+            try (Statement state = connect.createStatement()) {
+                state.execute("CREATE TABLE IF NOT EXISTS parties(" +
+                        "id integer," +
+                        "party varchar(255) NOT NULL" +
+                        ")");
+            }
+        }
+
+    }
+    @SneakyThrows
+    public void add(Integer id, Party party){
+        if(local){
+            localMap.put(id, party);
+            return;
+        }
+        String add = "INSERT INTO parties(id, party) VALUES (?, ?)";
+
+        try(PreparedStatement prep = connect.prepareStatement(add)) {
+            prep.setInt(1, id);
+            prep.setString(2, "'"+util.serializeParty(party)+"'");
+            prep.executeUpdate();
+        }
+    }
+    @SneakyThrows
+    public void update(Integer id, Party party){
+        if(local) return;
+        String update = "UPDATE parties SET party = ? WHERE id = ?";
+
+        try(PreparedStatement prep = connect.prepareStatement(update)) {
+            prep.setInt(2, id);
+            prep.setString(1, "'"+util.serializeParty(party)+"'");
+            prep.executeUpdate();
+        }
+    }
+    @SneakyThrows
+    public void remove(Integer id){
+        if(local){
+            localMap.remove(id);
+            return;
+        }
+        String remove = "DELETE FROM parties WHERE id = ?";
+
+        try(PreparedStatement prep = connect.prepareStatement(remove)) {
+            prep.setInt(1, id);
+            prep.executeUpdate();
+        }
+    }
+    @SneakyThrows
+    public static void drop(Connection connect){
+        if(local) return;
+        String drop = "DROP TABLE IF EXISTS parties";
+
+        try(PreparedStatement prep = connect.prepareStatement(drop)) {
+            prep.executeUpdate();
+        }
+    }
+    @SneakyThrows
+    public Party get(Integer id){
+        if(local){
+            return localMap.get(id);
+        }
+        String get = "SELECT * FROM parties WHERE id = ?";
+
+        try(PreparedStatement prep = connect.prepareStatement(get)) {
+            prep.setInt(1, id);
+            try (ResultSet result = prep.executeQuery()) {
+                if (result.next()){
+                    return util.deserializeParty(id, result.getString("party"));
+                }
+                return null;
+            }
+        }
+
+    }
+    @SneakyThrows
+    public Set<Integer> idSet(){
+        if(local) {
+            return localMap.keySet();
+        }
+        String get = "SELECT id FROM parties";
+
+        try(PreparedStatement prep = connect.prepareStatement(get)) {
+            try (ResultSet result = prep.executeQuery()){
+                if(result.next()) {
+                    Set<Integer> set = new HashSet<>();
+                    do {
+                        set.add(result.getInt("id"));
+                    } while (result.next());
+                    return set;
+                }
+                else return null;
+            }
+        }
+    }
+    public boolean contains(Integer id){
+        if(local) {
+            return localMap.containsKey(id);
+        }
+        return idSet().contains(id);
+    }
+
+}
