@@ -1,6 +1,6 @@
 name: MythicParties
 version: '${version}'
-main: ru.streamversus.mythicparties.MythicParties
+main: ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit
 api-version: '1.20'
 prefix: MythicParties
 authors: [StreamVersus]

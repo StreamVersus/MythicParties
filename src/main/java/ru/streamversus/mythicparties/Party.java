@@ -1,6 +1,5 @@
 package ru.streamversus.mythicparties;
 
-import dev.jorel.commandapi.CommandAPIBukkit;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -55,7 +54,7 @@ public class Party {
                     Field f = mythic.getDeclaredField("plugin");
                     f.setAccessible(true);
                     compatStatus = ((String) mythic.getMethod("getPartyPluginName").invoke(f.get(null))).equalsIgnoreCase(plugin.getName());
-                    CommandAPIBukkit.unregister("p", true, true);
+                    //CommandAPIVelocity.unregister("p", true, true);
                 } catch(Exception ignored){}
             }
             if(compatStatus == null) compatStatus = false;

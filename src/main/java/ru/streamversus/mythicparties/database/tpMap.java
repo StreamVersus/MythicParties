@@ -7,7 +7,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import ru.streamversus.mythicparties.MythicParties;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 import ru.streamversus.mythicparties.Utilities.util;
 
@@ -35,7 +35,7 @@ public class tpMap implements dbMap<UUID, Location>, Listener {
                         "loc TEXT NOT NULL" +
                         ")");
             }
-            MythicParties.getPlugin().getServer().getPluginManager().registerEvents(this, MythicParties.getPlugin());
+            MythicPartiesBukkit.getPlugin().getServer().getPluginManager().registerEvents(this, MythicPartiesBukkit.getPlugin());
         }
     }
     @SneakyThrows

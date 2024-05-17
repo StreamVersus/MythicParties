@@ -1,23 +1,15 @@
 package ru.streamversus.mythicparties.Proxy;
 
-import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import io.github.leonardosnt.bungeechannelapi.BungeeChannelApi;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.messaging.PluginMessageListener;
-import org.jetbrains.annotations.NotNull;
-import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.database.*;
 
@@ -25,9 +17,7 @@ import java.sql.*;
 import java.util.*;
 
 @SuppressWarnings("UnstableApiUsage")
-public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageListener {
-    @Getter
-    private final BungeeChannelApi api;
+public class ProxiedConnection implements ProxyHandler,Listener {
     private final dbMap<UUID, Location> tpmap;
     private final ConfigParser config;
     @Getter
@@ -40,13 +30,12 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
     @SneakyThrows
     public ProxiedConnection(Plugin plugin, ConfigParser config) {
         this.config = config;
-        this.api = BungeeChannelApi.of(plugin);
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-
-        plugin.getServer().getMessenger().registerOutgoingPluginChannel(MythicParties.getPlugin(), "BungeeCord");
-        plugin.getServer().getMessenger().registerIncomingPluginChannel(MythicParties.getPlugin(), "BungeeCord", this);
-
+        /*
+        plugin.getServer().getMessenger().registerOutgoingPluginChannel(MythicPartiesBukkit.getPlugin(), "BungeeCord");
+        plugin.getServer().getMessenger().registerIncomingPluginChannel(MythicPartiesBukkit.getPlugin(), "BungeeCord", this);
+        */
         Class.forName("com.mysql.cj.jdbc.Driver");
         connect = DriverManager.getConnection(
                 "jdbc:mysql://" + config.getUrl() + "/" + config.getName() + "?characterEncoding=utf8&autoReconnect=true",
@@ -55,7 +44,7 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
         this.tpmap = new tpMap(this);
         this.serverList = new onlineServers(this);
         this.players = new connectedPlayers(this);
-
+        /*
         api.registerForwardListener("MythicParties", (channelName, player, data) -> {
             ByteArrayDataInput in = ByteStreams.newDataInput(data);
             String subchannel = in.readUTF();
@@ -69,9 +58,9 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
                 default -> plugin.getLogger().severe("Unknown message!!");
             }
         });
+        */
     }
     public void disable(){
-        api.unregister();
         serverList.remove(serverName);
         if(!serverList.isOnline()){
             invitedMap.drop();
@@ -94,7 +83,7 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
     @SneakyThrows
     @Override
     public List<String> getServerList() {
-        return api.getServers().get();
+        return null;
     }
 
     public boolean isOnThisServer(UUID player) {
@@ -110,7 +99,7 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
             return;
         }
         tpmap.add(p.getUniqueId(), location);
-        api.connectOther(Objects.requireNonNull(p.getName()), server);
+        //api.connectOther(Objects.requireNonNull(p.getName()), server);
     }
 
     @Override
@@ -162,16 +151,17 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
     }
 
     private void forward(ByteArrayDataOutput message) {
-        api.forward("ALL", "MythicParties", message.toByteArray());
+        //api.forward("ALL", "MythicParties", message.toByteArray());
     }
+    /*
     @SneakyThrows
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (serverName == null) {
-            MythicParties.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(MythicParties.getPlugin(), () -> {
+            MythicPartiesBukkit.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(MythicPartiesBukkit.getPlugin(), () -> {
                 ByteArrayDataOutput out = ByteStreams.newDataOutput();
                 out.writeUTF("GetServer");
-                event.getPlayer().sendPluginMessage(MythicParties.getPlugin(), "BungeeCord", out.toByteArray());
+                event.getPlayer().sendPluginMessage(MythicPartiesBukkit.getPlugin(), "BungeeCord", out.toByteArray());
             }, 8L);
         }
     }
@@ -185,4 +175,5 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
             setServerName(in.readUTF());
         }
     }
+     */
 }

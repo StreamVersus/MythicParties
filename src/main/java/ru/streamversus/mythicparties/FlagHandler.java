@@ -9,6 +9,7 @@ import com.sk89q.worldguard.session.MoveType;
 import com.sk89q.worldguard.session.Session;
 import com.sk89q.worldguard.session.handler.Handler;
 import lombok.Getter;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 
 import java.util.*;
 
@@ -40,7 +41,7 @@ public class FlagHandler extends Handler {
         int buffer = 0;
         if(entered.isEmpty()) {limitMap.remove(player.getUniqueId()); return; }
         for(ProtectedRegion region : entered) {
-            Integer limit = region.getFlag(MythicParties.getLimitFlag());
+            Integer limit = region.getFlag(MythicPartiesBukkit.getLimitFlag());
             if(limit == null || limit == 0) continue;
 
             if(buffer < limit) buffer = limit;
@@ -56,7 +57,7 @@ public class FlagHandler extends Handler {
         }
 
         for(ProtectedRegion region : entered) {
-            StateFlag.State status = region.getFlag(MythicParties.getFFFlag());
+            StateFlag.State status = region.getFlag(MythicPartiesBukkit.getFFFlag());
             if(status == null) continue;
             if(status == StateFlag.State.DENY) buffer = true;
         }

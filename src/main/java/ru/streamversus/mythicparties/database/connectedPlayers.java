@@ -7,7 +7,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import ru.streamversus.mythicparties.MythicParties;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 
 import java.sql.Connection;
@@ -36,7 +36,7 @@ public class connectedPlayers implements Listener {
                         ")");
             }
         }
-        MythicParties.getPlugin().getServer().getPluginManager().registerEvents(this, MythicParties.getPlugin());
+        MythicPartiesBukkit.getPlugin().getServer().getPluginManager().registerEvents(this, MythicPartiesBukkit.getPlugin());
     }
     @SneakyThrows
     public static void drop(){
@@ -103,7 +103,7 @@ public class connectedPlayers implements Listener {
     }
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent e){
-        MythicParties.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(MythicParties.getPlugin(), () -> add(e.getPlayer().getUniqueId()), 1L);
+        MythicPartiesBukkit.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(MythicPartiesBukkit.getPlugin(), () -> add(e.getPlayer().getUniqueId()), 1L);
     }
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerLeave(PlayerQuitEvent e){

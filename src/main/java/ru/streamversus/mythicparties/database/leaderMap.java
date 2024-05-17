@@ -1,7 +1,7 @@
 package ru.streamversus.mythicparties.database;
 
 import lombok.SneakyThrows;
-import ru.streamversus.mythicparties.MythicParties;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 import ru.streamversus.mythicparties.Party;
 import ru.streamversus.mythicparties.Utilities.util;
 
@@ -20,7 +20,7 @@ public class leaderMap implements dbMap<UUID, Party> {
 
     @SneakyThrows
     public leaderMap(){
-        connect = MythicParties.getHandler().getConnect();
+        connect = MythicPartiesBukkit.getHandler().getConnect();
         if(connect == null){
             local = true;
         }

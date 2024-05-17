@@ -8,7 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
-import org.bukkit.command.CommandSender;
+import org.bukkit.command.CommandSource;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.Plugin;
@@ -35,7 +35,7 @@ public class PartyService {
     public final static dbMap<UUID, Party> leaderMap = new leaderMap();
     private final ProxyHandler proxy;
 
-    PartyService(Plugin plugin, ConfigParser config, ProxyHandler proxy) {
+    public PartyService(Plugin plugin, ConfigParser config, ProxyHandler proxy) {
         this.config = config;
         this.plugin = plugin;
         this.proxy = proxy;

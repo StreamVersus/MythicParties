@@ -3,7 +3,7 @@ package ru.streamversus.mythicparties.Utilities;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import ru.streamversus.mythicparties.MythicParties;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 import ru.streamversus.mythicparties.Party;
 
 import java.nio.charset.StandardCharsets;
@@ -51,7 +51,7 @@ public class util {
     public static Party deserializeParty(String raw){
         String[] splited = raw.split(":");
         UUID leader = UUID.fromString(splited[0]);
-        Party party = new Party(leader, MythicParties.getPlugin(), MythicParties.getConfigParser(), MythicParties.getHandler(), false);
+        Party party = new Party(leader, MythicPartiesBukkit.getPlugin(), MythicPartiesBukkit.getConfigParser(), MythicPartiesBukkit.getHandler(), false);
         for(int i = 1; i < splited.length; i++){
             party.addPlayer(UUID.fromString(splited[1]));
         }

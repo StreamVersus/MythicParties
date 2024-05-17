@@ -1,5 +1,6 @@
 package ru.streamversus.mythicparties;
 
+import com.velocitypowered.api.command.CommandSource;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.IntegerArgument;
@@ -11,6 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
+import ru.streamversus.mythicparties.entrypoints.MythicPartiesBukkit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,10 +62,10 @@ public class CommandRegister {
     }
     public void commandHandler(BiFunction<CommandSender, CommandArguments, Boolean> consumer, String name, CommandSender sender, CommandArguments args){
         if(!(sender instanceof Player p)) {
-            MythicParties.getPlugin().getLogger().info("Plugin doesn't support executing commands from Console");
+            MythicPartiesBukkit.getPlugin().getLogger().info("Plugin doesn't support executing commands from Console");
             return;
         }
-        if(!(name == null)) MythicParties.getHandler().playSound(p.getUniqueId(), name);
+        if(!(name == null)) MythicPartiesBukkit.getHandler().playSound(p.getUniqueId(), name);
         boolean success = consumer.apply(sender, args);
         String command = config.getCommand(success, commandName+ "_" + name);
         if(Objects.equals(command, null)) return;
