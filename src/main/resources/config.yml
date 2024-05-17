@@ -4,12 +4,14 @@ commands_name:
   - party
   - party_a
 
+#ОТКЛЮЧЕННО
 #Включение поддержки прокси
 #Для верной работы требуется:
 #spigot.yml -> bungeecord = true; даже для velocity
 #в конфиге velocity обязательно bungee-plugin-message-channel = true
 proxy_support: false
 
+#ОТКЛЮЧЕННО
 #Необходимо для синхронизации команд между серверами
 #Необязательно при выключенном прокси
 mysql:

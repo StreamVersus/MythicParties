@@ -36,25 +36,31 @@ public class FlagHandler extends Handler {
         return true;
     }
     private void limitUtil(LocalPlayer player, Set<ProtectedRegion> entered, Set<ProtectedRegion> exited){
-        int buffer = 0;
         if(entered.isEmpty() && exited.isEmpty()) return;
+        int buffer = 0;
         if(entered.isEmpty()) {limitMap.remove(player.getUniqueId()); return; }
         for(ProtectedRegion region : entered) {
             Integer limit = region.getFlag(MythicParties.getLimitFlag());
             if(limit == null || limit == 0) continue;
-            if(!(buffer > limit)) buffer = limit;
+
+            if(buffer < limit) buffer = limit;
         }
         if(buffer != 0) limitMap.put(player.getUniqueId(), buffer);
     }
     private void FFUtil(LocalPlayer player, Set<ProtectedRegion> entered, Set<ProtectedRegion> exited){
-        boolean buffer = false;
         if(entered.isEmpty() && exited.isEmpty()) return;
-        if(entered.isEmpty()) {FFOffSet.remove(player.getUniqueId()); return; }
+        boolean buffer = false;
+        if(entered.isEmpty()) {
+            FFOffSet.remove(player.getUniqueId());
+            return;
+        }
+
         for(ProtectedRegion region : entered) {
             StateFlag.State status = region.getFlag(MythicParties.getFFFlag());
             if(status == null) continue;
             if(status == StateFlag.State.DENY) buffer = true;
         }
+
         if(buffer) FFOffSet.add(player.getUniqueId());
         else FFOffSet.remove(player.getUniqueId());
     }

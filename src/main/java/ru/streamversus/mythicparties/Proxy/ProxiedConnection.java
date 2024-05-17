@@ -3,115 +3,120 @@ package ru.streamversus.mythicparties.Proxy;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import io.github.leonardosnt.bungeechannelapi.BungeeChannelApi;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.messaging.Messenger;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
+import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
-import ru.streamversus.mythicparties.PartyService;
-import ru.streamversus.mythicparties.Utilities.MessageSender;
-import ru.streamversus.mythicparties.Utilities.util;
+import ru.streamversus.mythicparties.database.*;
 
 import java.sql.*;
 import java.util.*;
+
 @SuppressWarnings("UnstableApiUsage")
-public class ProxiedConnection implements ProxyHandler,PluginMessageListener,Listener {
-    private final Plugin plugin;
-    private final Messenger messenger;
-    private PartyService partyService;
-    private final Map<UUID, Location> tpmap = new HashMap<>();
+public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageListener {
+    @Getter
+    private final BungeeChannelApi api;
+    private final dbMap<UUID, Location> tpmap;
     private final ConfigParser config;
     @Getter
     private Connection connect;
+    @Getter
+    private String serverName;
+    private final onlineServers serverList;
+    private final connectedPlayers players;
 
     @SneakyThrows
-    public ProxiedConnection(Plugin plugin, ConfigParser config){
-        this.plugin = plugin;
-        this.messenger = plugin.getServer().getMessenger();
+    public ProxiedConnection(Plugin plugin, ConfigParser config) {
         this.config = config;
+        this.api = BungeeChannelApi.of(plugin);
 
-        messenger.registerOutgoingPluginChannel(plugin, "BungeeCord");
-        messenger.registerIncomingPluginChannel(plugin, "BungeeCord", this);
-        messenger.registerOutgoingPluginChannel(plugin, "mythicparties:channel");
-        messenger.registerIncomingPluginChannel(plugin, "mythicparties:channel", this);
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
+
+        plugin.getServer().getMessenger().registerOutgoingPluginChannel(MythicParties.getPlugin(), "BungeeCord");
+        plugin.getServer().getMessenger().registerIncomingPluginChannel(MythicParties.getPlugin(), "BungeeCord", this);
 
         Class.forName("com.mysql.cj.jdbc.Driver");
         connect = DriverManager.getConnection(
-                "jdbc:mysql://" + config.getUrl() + "/" + config.getName() + "?useUnicode=true&characterEncoding=utf8&autoReconnect=true",
+                "jdbc:mysql://" + config.getUrl() + "/" + config.getName() + "?characterEncoding=utf8&autoReconnect=true",
                 config.getUsername(), config.getPassword());
 
+        this.tpmap = new tpMap(this);
+        this.serverList = new onlineServers(this);
+        this.players = new connectedPlayers(this);
+
+        api.registerForwardListener("MythicParties", (channelName, player, data) -> {
+            ByteArrayDataInput in = ByteStreams.newDataInput(data);
+            String subchannel = in.readUTF();
+            Player p = Bukkit.getPlayer(UUID.fromString(in.readUTF()));
+            if(p == null) return;
+            switch (subchannel){
+                case "executeAs" -> p.performCommand(in.readUTF());
+                case "playSound" -> config.playSound(in.readUTF(), p);
+                case "sendMessage" -> config.sendMessage(p, in.readUTF());
+                case "sendWithReplacers" -> config.sendWithReplacer(p, in.readUTF(), in.readUTF());
+                default -> plugin.getLogger().severe("Unknown message!!");
+            }
+        });
     }
     public void disable(){
-        messenger.unregisterOutgoingPluginChannel(plugin);
-        messenger.unregisterIncomingPluginChannel(plugin);
-    }
-    private Player getPlayer(){
-        Collection<? extends Player> p = Bukkit.getOnlinePlayers();
-        if(p.isEmpty()){
-            try {
-                wait(10);
-            }catch (Exception ignored) {}
-        }
-        return p.toArray(new Player[0])[0];
-    }
-    public String getServerName(){
-        ByteArrayDataInput array = new MessageSender(plugin, "BungeeCord", "GetServer", plugin.getServer()).getResult();
-        if(array == null){
-            return "local";
-        }else{
-            return array.readUTF();
+        api.unregister();
+        serverList.remove(serverName);
+        if(!serverList.isOnline()){
+            invitedMap.drop();
+            leaderMap.drop();
+            onlineServers.drop();
+            partyMap.drop();
+            tpMap.drop();
+            connectedPlayers.drop();
         }
     }
+
+    public void setServerName(String name){
+        serverName = name;
+        serverList.add(name);
+    }
+    @SneakyThrows
+    public List<String> getPlayerList() {
+        return players.getNames();
+    }
+    @SneakyThrows
     @Override
-    public List<String> getPlayerList(){
-        ByteArrayDataInput input = new MessageSender(plugin, "BungeeCord", "PlayerCount", getPlayer(),"ALL").getResult();
-        List<String> proxylist;
-        if(input != null) {
-            input.readUTF();
-            proxylist = new ArrayList<>(List.of(input.readUTF().split(", ")));
-        } else {
-            proxylist = new ArrayList<>();
-        }
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if(!proxylist.contains(player.getName())) proxylist.add(player.getName());
-        }
-        return proxylist;
+    public List<String> getServerList() {
+        return api.getServers().get();
+    }
+
+    public boolean isOnThisServer(UUID player) {
+        return Bukkit.getPlayer(player) != null;
     }
 
     @Override
-    public List<String> getServerList() {
-        try {
-            return List.of(new MessageSender(plugin, "BungeeCord", "GetServers", getPlayer()).getResult().readUTF().split(", "));
-        } catch(Exception e){
-            return new ArrayList<>();
+    public void teleportTo(OfflinePlayer p, String server, Location location) {
+        if(Objects.equals(server, serverName)){
+            Player player = p.getPlayer();
+            assert player != null;
+            player.teleport(location);
+            return;
         }
-    }
-    public boolean isOnAnotherServer(UUID player){
-        return Bukkit.getPlayer(player) == null;
-    }
-    @Override
-    public void teleportTo(UUID name, String server, Location location) {
-        if(Objects.equals(server, getServerName())) Bukkit.getPlayer(name).teleport(location);
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("teleport");
-        out.writeUTF(String.valueOf(name));
-        out.writeUTF(util.serializeLoc(location));
-        forward(out);
-        new MessageSender(plugin, "BungeeCord", "ConnectOther", getPlayer(), Bukkit.getOfflinePlayer(name).getName(), server);
+        tpmap.add(p.getUniqueId(), location);
+        api.connectOther(Objects.requireNonNull(p.getName()), server);
     }
 
     @Override
     public boolean executeAs(UUID player, String command) {
-        if(!isOnAnotherServer(player)) return Objects.requireNonNull(Bukkit.getPlayer(player)).performCommand(command);
+        if (isOnThisServer(player)) return Objects.requireNonNull(Bukkit.getPlayer(player)).performCommand(command);
+
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("executeAs");
         out.writeUTF(String.valueOf(player));
@@ -122,7 +127,7 @@ public class ProxiedConnection implements ProxyHandler,PluginMessageListener,Lis
 
     @Override
     public void playSound(UUID player, String sound) {
-        if(!isOnAnotherServer(player)) config.playSound(sound, Bukkit.getPlayer(player));
+        if (isOnThisServer(player)) config.playSound(sound, Bukkit.getPlayer(player));
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("playSound");
         out.writeUTF(String.valueOf(player));
@@ -132,7 +137,7 @@ public class ProxiedConnection implements ProxyHandler,PluginMessageListener,Lis
 
     @Override
     public boolean sendMessage(UUID player, String msgname) {
-        if(!isOnAnotherServer(player)) return config.sendMessage(Bukkit.getPlayer(player), msgname);
+        if (isOnThisServer(player)) return config.sendMessage(Bukkit.getPlayer(player), msgname);
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("sendMessage");
         out.writeUTF(String.valueOf(player));
@@ -143,10 +148,11 @@ public class ProxiedConnection implements ProxyHandler,PluginMessageListener,Lis
 
     @Override
     public void sendWithReplacer(UUID player, String msgname, String replacer) {
-        if(!isOnAnotherServer(player)) {
+        if (isOnThisServer(player)) {
             config.sendWithReplacer(Bukkit.getPlayer(player), replacer, msgname);
             return;
         }
+
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("sendWithReplacers");
         out.writeUTF(String.valueOf(player));
@@ -155,74 +161,28 @@ public class ProxiedConnection implements ProxyHandler,PluginMessageListener,Lis
         forward(out);
     }
 
-    @Override
-    public void connectService(PartyService service) {
-        partyService = service;
+    private void forward(ByteArrayDataOutput message) {
+        api.forward("ALL", "MythicParties", message.toByteArray());
+    }
+    @SneakyThrows
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (serverName == null) {
+            MythicParties.getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(MythicParties.getPlugin(), () -> {
+                ByteArrayDataOutput out = ByteStreams.newDataOutput();
+                out.writeUTF("GetServer");
+                event.getPlayer().sendPluginMessage(MythicParties.getPlugin(), "BungeeCord", out.toByteArray());
+            }, 8L);
+        }
     }
 
     @Override
-    public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] bytes) {
-        if(channel.equals("BungeeCord")){
-            ByteArrayDataInput in = ByteStreams.newDataInput(bytes);
-            short len = in.readShort();
-            byte[] msgbytes = new byte[len];
-            in.readFully(msgbytes);
-            ByteArrayDataInput msg = ByteStreams.newDataInput(msgbytes);
-            String forwardchannel = msg.readUTF();
-
-            switch (forwardchannel) {
-                case "teleport" -> {
-                    if (msg.readUTF().equals(getServerName())){
-                        UUID id = UUID.fromString(msg.readUTF());
-                        Player p = Bukkit.getOfflinePlayer(id).getPlayer();
-                        Location loc = util.unserializeLoc(msg.readUTF());
-                        if (p != null) {
-                            p.teleport(loc);
-                        } else {
-                            tpmap.put(id, loc);
-                        }
-                    }
-                }
-                case "executeAs" -> {
-                    UUID id = UUID.fromString(msg.readUTF());
-                    String command = msg.readUTF();
-                    if (isOnAnotherServer(id)) return;
-                    Objects.requireNonNull(Bukkit.getPlayer(id)).performCommand(command);
-                }
-                case "playSound" -> {
-                    UUID id = UUID.fromString(msg.readUTF());
-                    String sound = msg.readUTF();
-                    if (isOnAnotherServer(id)) return;
-                    Player p = Bukkit.getPlayer(id);
-                    config.playSound(sound, p);
-                }
-                case "sendMessage" -> {
-                    UUID id = UUID.fromString(msg.readUTF());
-                    String msgname = msg.readUTF();
-                    if (isOnAnotherServer(id)) return;
-                    Player p = Bukkit.getPlayer(id);
-                    config.sendMessage(p, msgname);
-                }
-                case "sendWithReplacers" -> {
-                    UUID id = UUID.fromString(msg.readUTF());
-                    UUID replacer = UUID.fromString(msg.readUTF());
-                    String msgname = msg.readUTF();
-                    if (isOnAnotherServer(id)) return;
-                    Player p = Bukkit.getPlayer(id);
-                    String raw = Bukkit.getOfflinePlayer(replacer).getName();
-                    config.sendWithReplacer(p, msgname, raw);
-                }
-            }
+    public void onPluginMessageReceived(@NotNull String s, @NotNull Player player, byte @NotNull [] bytes) {
+        if(!s.equals("BungeeCord")) return;
+        ByteArrayDataInput in = ByteStreams.newDataInput(bytes);
+        String subchannel = in.readUTF();
+        if(subchannel.equals("GetServer")){
+            setServerName(in.readUTF());
         }
-    }
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent e){
-        if(tpmap.containsKey(e.getPlayer().getUniqueId())){
-            e.getPlayer().teleport(tpmap.get(e.getPlayer().getUniqueId()));
-        }
-    }
-    private void forward(ByteArrayDataOutput message){
-        byte[] raw = message.toByteArray();
-        new MessageSender(plugin,"BungeeCord", "Forward", getPlayer(), "ALL", "mythicparties:channel", raw.length, raw).getResult();
     }
 }
