@@ -8,7 +8,8 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
-import ru.streamversus.mythicparties.database.partyList;
+import ru.streamversus.mythicparties.database.dbMap;
+import ru.streamversus.mythicparties.database.partyMap;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
@@ -25,8 +26,12 @@ public class Party {
     private final List<UUID> playerUUIDs = new ArrayList<>();
     @Getter
     private int id;
-    public static final partyList idMap = new partyList(MythicParties.getHandler());
-    public Party(UUID leader, Plugin plugin, ConfigParser config, ProxyHandler proxyhandle) {
+    public static final dbMap<Integer, Party> idMap = new partyMap();
+    public Party(UUID leader, Plugin plugin, ConfigParser config, ProxyHandler proxyhandle){
+        this(leader, plugin, config, proxyhandle, true);
+    }
+
+    public Party(UUID leader, Plugin plugin, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
         this.config = config;
         this.proxyhandle = proxyhandle;
         updateLimit();
@@ -47,7 +52,6 @@ public class Party {
             }else{
                 try {
                     Class<?> mythic = Class.forName("net.playavalon.mythicdungeons.MythicDungeons");
-                    plugin.getLogger().info("test");
                     Field f = mythic.getDeclaredField("plugin");
                     f.setAccessible(true);
                     compatStatus = ((String) mythic.getMethod("getPartyPluginName").invoke(f.get(null))).equalsIgnoreCase(plugin.getName());
@@ -67,7 +71,7 @@ public class Party {
                         switch (method.getName()) {
                             case "addPlayer" -> addPlayer((OfflinePlayer) args[0]);
                             case "removePlayer" -> removePlayer((OfflinePlayer) args[0]);
-                            case "getPlayers" -> {return getPlayers();}
+                            case "getPlayers" -> getPlayers();
                             case "getLeader" -> getLeader();
                             default -> throw new IllegalArgumentException("Proxy error!!!");
                         }
@@ -77,7 +81,7 @@ public class Party {
                 clazz.getMethod("initDungeonParty", Plugin.class).invoke(party, plugin);
             }catch(Exception ignored){}
         }
-        idMap.add(id, this);
+        if(map) idMap.add(id, this);
     }
     private void updateLimit(){
         maxPlayer = FlagHandler.getLimitMap().get(leaderUUID) == null ? config.getLimit() : FlagHandler.getLimitMap().get(leaderUUID);
@@ -148,7 +152,10 @@ public class Party {
     public int getPlayerCount(){
         return playerUUIDs.toArray().length;
     }
-    public void changeLeaderUUID(UUID p) {leaderUUID = p; idMap.update(id, this);}
+    public void changeLeaderUUID(UUID p) {
+        leaderUUID = p;
+        idMap.update(id, this);
+    }
     public @NotNull OfflinePlayer getLeader() {
         return Bukkit.getOfflinePlayer(leaderUUID);
     }

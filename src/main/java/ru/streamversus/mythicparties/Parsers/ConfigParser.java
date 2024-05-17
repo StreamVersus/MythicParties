@@ -150,10 +150,10 @@ public class ConfigParser {
         return true;
     }
 
-    public void sendWithReplacer(Player receiver, String invited, String key){
+    public void sendWithReplacer(Player receiver, String replacer, String key){
         String raw = langmap.get(key);
         if(raw == null) return;
-        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_receiver\\$", receiver.getName()).replaceAll("\\$player_replacer\\$", invited));
+        Component replaced = MiniMessage.miniMessage().deserialize(raw.replaceAll("\\$player_receiver\\$", receiver.getName()).replaceAll("\\$player_replacer\\$", replacer));
         receiver.sendMessage(replaced);
     }
 }

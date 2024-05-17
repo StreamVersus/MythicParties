@@ -3,7 +3,7 @@ package ru.streamversus.mythicparties;
 import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.IntegerArgument;
-import dev.jorel.commandapi.arguments.PlayerArgument;
+import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -25,10 +25,13 @@ public class CommandRegister {
     private final CommandAPICommand Command;
     private final ConfigParser config;
     private final PartyService service;
+    private final ArgumentSuggestions<CommandSender> playerSugg, teamPlaySugg;
 
-    CommandRegister(String name, ConfigParser config, PartyService service) {
+    CommandRegister(String name, ConfigParser config, PartyService service, ArgumentSuggestions<CommandSender> playerSuggestor, ArgumentSuggestions<CommandSender> teamplaySuggestor) {
         this.config = config;
         this.service = service;
+        this.playerSugg = playerSuggestor;
+        this.teamPlaySugg = teamplaySuggestor;
         try{
             Bukkit.getServer().getPluginManager().addPermission(new Permission("MythicParties." + name));
         } catch (IllegalArgumentException ignored) {}
@@ -41,7 +44,7 @@ public class CommandRegister {
         CommandAPICommand c = new CommandAPICommand(name)
                 .withPermission("MysticParties." + commandName + "." + name)
                 .executes((sender, args) -> {commandHandler(consumer, name, sender, args);});
-        if(playerArg) c.withArguments(new PlayerArgument("playerArg").replaceSuggestions(PartyService.playerSuggestor));
+        if(playerArg) c.withArguments(new StringArgument("playerArg").replaceSuggestions(playerSugg));
         if(slotArg) c.withArguments(new IntegerArgument("slotArg").includeSuggestions(ArgumentSuggestions.strings(info -> {
             int i = service.getPartySize((Player) info.sender());
             if(i>10) i = 10;
@@ -51,13 +54,13 @@ public class CommandRegister {
             }
             return retval.toArray(String[]::new);
         })));
-        if(teamArg) c.withArguments(new PlayerArgument("playerArg").replaceSuggestions(PartyService.teamplayerSuggestor));
+        if(teamArg) c.withArguments(new StringArgument("playerArg").replaceSuggestions(teamPlaySugg));
         nameList.add(name);
         return c;
     }
     public void commandHandler(BiFunction<CommandSender, CommandArguments, Boolean> consumer, String name, CommandSender sender, CommandArguments args){
         if(!(sender instanceof Player p)) {
-            System.out.println("Plugin doesn't support executing commands from Console");
+            MythicParties.getPlugin().getLogger().info("Plugin doesn't support executing commands from Console");
             return;
         }
         if(!(name == null)) MythicParties.getHandler().playSound(p.getUniqueId(), name);
