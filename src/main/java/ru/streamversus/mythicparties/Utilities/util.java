@@ -51,7 +51,7 @@ public class util {
     public static Party deserializeParty(String raw){
         String[] splited = raw.split(":");
         UUID leader = UUID.fromString(splited[0]);
-        Party party = new Party(leader, MythicParties.getPlugin(), MythicParties.getConfigParser(), MythicParties.getHandler(), false);
+        Party party = new Party(leader, MythicParties.getConfigParser(), MythicParties.getHandler(), false);
         for(int i = 1; i < splited.length; i++){
             party.addPlayer(UUID.fromString(splited[1]));
         }

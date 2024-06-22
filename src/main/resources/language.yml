@@ -16,6 +16,8 @@ invite_sended: <i><b><light_purple>Игрок $player_replacer$ был приг�
 invite_accepted: <i><b><green>Игрок $player_replacer$ вступил в команду</green></b></i>
 invite_refused: <i><b><red>Игрок $player_replacer$ отказался от вступления в команду</red></b></i>
 invite_self_refused: <i><b><red>Вы отказались от вступления в команду игрока $player_replacer$</red></b></i>
+invite_dismiss: <i><b><light_purple>Приглашение от игрока $player_replacer$ было просроченно</light_purple></b></i>
+invite_self_dismiss: <i><b><light_purple>Ваше приглашение было просроченно</light_purple></b></i>
 
 givelead_non_leader: <i><b><red>Вы не являетесь лидером!</red></b></i>
 givelead_no_player: <i><b><red>Такого игрока не существует!</red></b></i>

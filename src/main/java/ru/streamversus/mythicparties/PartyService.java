@@ -28,7 +28,7 @@ import java.util.function.BiFunction;
 public class PartyService {
     private final Plugin plugin;
     private final ArgumentSuggestions<CommandSender> subTagSuggestor, slotSuggestor;
-    private final Map<UUID, BukkitTask> disbandTask = new HashMap<>(), kickTask = new HashMap<>();
+    private final Map<UUID, BukkitTask> disbandTask = new HashMap<>(), kickTask = new HashMap<>(), inviteTask = new HashMap<>();
     private final ConfigParser config;
     private final CommandRegister partycommandRegister, partyadmincommandRegister;
     private final dbMap<UUID, Party> partyMap, invitedMap;
@@ -122,6 +122,14 @@ public class PartyService {
         commandParty();
         commandParty_a();
     }
+    public void scheduler(OfflinePlayer p){
+        if(leaderMap.contains(p.getUniqueId())){
+            scheduleDisband(p, false);
+        }
+        else{
+            scheduleKick(p, false);
+        }
+    }
     public void scheduleDisband(OfflinePlayer p, boolean disable){
         if(!config.isDisband()) return;
         Party party = leaderMap.get(p.getUniqueId());
@@ -166,7 +174,7 @@ public class PartyService {
         if(leaderMap.get(p.getUniqueId()) != null || partyMap.get(p.getUniqueId()) != null) return;
         UUID id = p.getUniqueId();
         if (leaderMap.get(id) != null) return;
-        Party party = new Party(id, plugin, config, proxy);
+        Party party = new Party(id, config, proxy);
         leaderMap.add(id, party);
         partyMap.add(id, party);
     }
@@ -174,7 +182,7 @@ public class PartyService {
     public void createParty(UUID id) {
         if(leaderMap.get(id) != null || partyMap.get(id) != null) return;
         if(leaderMap.get(id) != null) return;
-        Party party = new Party(id, plugin, config, proxy);
+        Party party = new Party(id, config, proxy);
         leaderMap.add(id, party);
         partyMap.add(id, party);
     }
@@ -204,11 +212,19 @@ public class PartyService {
         OfflinePlayer invitedPlayer =  Bukkit.getOfflinePlayer(inviteName);
         if(p == invitedPlayer) return proxy.sendMessage(p.getUniqueId(), "invite_self");
         Party party = leaderMap.get(p.getUniqueId());
-        if(party.getLimit() < party.getPlayerCount()+1) return proxy.sendMessage(p.getUniqueId(), "invite_party_full");
+        if(party.getLimit() <= party.getPlayerCount()) return proxy.sendMessage(p.getUniqueId(), "invite_party_full");
         if(invitedMap.get(invitedPlayer.getUniqueId()) != null) return proxy.sendMessage(p.getUniqueId(), "invite_already_invited");
         invitedMap.add(invitedPlayer.getUniqueId(), party);
         proxy.sendWithReplacer(invitedPlayer.getUniqueId(),"invite_alert", p.getName());
         party.forEach((player) -> proxy.sendWithReplacer(player.getUniqueId(), "invite_sended", invitedPlayer.getName()));
+        inviteTask.put(invitedPlayer.getUniqueId(), new BukkitRunnable() {
+            @Override
+            public void run() {
+                invitedMap.remove(invitedPlayer.getUniqueId());
+                proxy.sendMessage(p.getUniqueId(), "invite_self_dismiss");
+                proxy.sendWithReplacer(invitedPlayer.getUniqueId(), "invite_dismiss", p.getName());
+            }
+        }.runTaskLater(this.plugin, config.getInviteTimer()));
         return true;
     }
 
@@ -287,6 +303,7 @@ public class PartyService {
         party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), "invite_accepted", sender.getName()));
         leaderMap.remove(sender.getUniqueId()).destroy();
         partyMap.replace(sender.getUniqueId(), party);
+        inviteTask.remove(sender.getUniqueId()).cancel();
         return true;
     }
     public boolean refuse(Player sender){

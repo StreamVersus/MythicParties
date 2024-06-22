@@ -22,11 +22,9 @@ public class ConfigParser {
     @Getter
     private List<String> commandNameList;
     @Getter
-    private boolean disband;
+    private boolean disband, proxy, MDSupport;
     @Getter
-    private long leaderDisband, playerKick;
-    @Getter
-    private boolean proxy;
+    private long leaderDisband, playerKick, inviteTimer;
     @Getter
     private String username, password, url, name;
 
@@ -41,6 +39,7 @@ public class ConfigParser {
 
     private void precompileConfig() {
         proxy = config.getBoolean("proxy_support");
+        MDSupport = config.getBoolean("MDSupport");
         ConfigurationSection commandSection = config.getConfigurationSection("command_trigger");
         assert commandSection != null;
         commandSection.getKeys(false).forEach((string) -> {
@@ -57,9 +56,10 @@ public class ConfigParser {
         soundSection.getKeys(false).forEach((string) -> soundMap.put(string, soundSection.getString(string)));
         this.commandNameList = config.getStringList("commands_name");
 
-        ConfigurationSection disbandSection = config.getConfigurationSection("timer_to_kick");
+        ConfigurationSection disbandSection = config.getConfigurationSection("timers");
         assert disbandSection != null;
         disband = disbandSection.getBoolean("disband");
+        inviteTimer = disbandSection.getLong("invite");
         leaderDisband = disbandSection.getLong("leader");
         playerKick = disbandSection.getLong("participant");
 

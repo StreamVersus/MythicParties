@@ -71,7 +71,7 @@ public final class MythicParties extends JavaPlugin implements Listener{
 
         configParser = new ConfigParser(this, YamlConfiguration.loadConfiguration(f));
 
-        handler = new Local(configParser);;
+        handler = new Local(configParser);
 
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this)
                 .shouldHookPaperReload(true)
@@ -125,9 +125,7 @@ public final class MythicParties extends JavaPlugin implements Listener{
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLeave(PlayerQuitEvent event) {
-        Player p = event.getPlayer();
-        partyService.scheduleDisband(p, false);
-        partyService.scheduleKick(p, false);
+        partyService.scheduler(event.getPlayer());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

@@ -1,5 +1,8 @@
 verbose: false
 
+#Интеграция с MythicDungeons
+MDSupport: true
+
 commands_name:
   - party
   - party_a
@@ -35,7 +38,8 @@ sound_notification:
   slotplayer:
   help:
 
-timer_to_kick:
+timers:
+  invite: 1800
   leader: 3600
   participant: 3600
   disband: true

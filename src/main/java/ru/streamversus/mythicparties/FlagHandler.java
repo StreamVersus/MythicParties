@@ -1,11 +1,11 @@
 package ru.streamversus.mythicparties;
 
-import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldguard.LocalPlayer;
+import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.flags.StateFlag;
+import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-import com.sk89q.worldguard.session.MoveType;
 import com.sk89q.worldguard.session.Session;
 import com.sk89q.worldguard.session.handler.Handler;
 import lombok.Getter;
@@ -30,35 +30,40 @@ public class FlagHandler extends Handler {
         }
     }
     @Override
-    public boolean onCrossBoundary(LocalPlayer player, Location from, Location to, ApplicableRegionSet toSet, Set<ProtectedRegion> entered, Set<ProtectedRegion> exited, MoveType moveType) {
-        limitUtil(player, entered, exited);
-        FFUtil(player, entered, exited);
-        return true;
+    public void tick(LocalPlayer player, ApplicableRegionSet set) {
+        RegionManager regions = WorldGuard.getInstance().getPlatform().getRegionContainer().get(player.getWorld());
+        assert regions != null;
+        Set<ProtectedRegion> set1 = new HashSet<>(set.getRegions());
+        set1.add(regions.getRegions().get("__global__"));
+        limitUtil(player, set1);
+        FFUtil(player, set1);
     }
-    private void limitUtil(LocalPlayer player, Set<ProtectedRegion> entered, Set<ProtectedRegion> exited){
-        if(entered.isEmpty() && exited.isEmpty()) return;
-        int buffer = 0;
-        if(entered.isEmpty()) {limitMap.remove(player.getUniqueId()); return; }
-        for(ProtectedRegion region : entered) {
-            Integer limit = region.getFlag(MythicParties.getLimitFlag());
-            if(limit == null || limit == 0) continue;
+    private void limitUtil(LocalPlayer player, Set<ProtectedRegion> set){
+        int limitBuffer = 0;
 
-            if(buffer < limit) buffer = limit;
+        for (ProtectedRegion protectedRegion : set) {
+            Integer limit = protectedRegion.getFlag(MythicParties.getLimitFlag());
+
+            if(!(limit == null)) limitBuffer = limitBuffer < limit ? limit : limitBuffer;
         }
-        if(buffer != 0) limitMap.put(player.getUniqueId(), buffer);
+
+        if(limitBuffer != MythicParties.getConfigParser().getLimit()){
+
+            if(limitMap.containsKey(player.getUniqueId())){
+                limitMap.replace(player.getUniqueId(), limitBuffer);
+            }
+            else limitMap.put(player.getUniqueId(), limitBuffer);
+
+        }
+        else limitMap.remove(player.getUniqueId());
     }
-    private void FFUtil(LocalPlayer player, Set<ProtectedRegion> entered, Set<ProtectedRegion> exited){
-        if(entered.isEmpty() && exited.isEmpty()) return;
+    private void FFUtil(LocalPlayer player, Set<ProtectedRegion> set){
         boolean buffer = false;
-        if(entered.isEmpty()) {
-            FFOffSet.remove(player.getUniqueId());
-            return;
-        }
 
-        for(ProtectedRegion region : entered) {
-            StateFlag.State status = region.getFlag(MythicParties.getFFFlag());
-            if(status == null) continue;
-            if(status == StateFlag.State.DENY) buffer = true;
+        for (ProtectedRegion protectedRegion : set) {
+            StateFlag.State state = protectedRegion.getFlag(MythicParties.getFFFlag());
+
+            if(state == StateFlag.State.DENY) buffer = true;
         }
 
         if(buffer) FFOffSet.add(player.getUniqueId());

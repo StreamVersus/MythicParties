@@ -1,18 +1,14 @@
 package ru.streamversus.mythicparties;
 
-import dev.jorel.commandapi.CommandAPIBukkit;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 import ru.streamversus.mythicparties.database.dbMap;
 import ru.streamversus.mythicparties.database.partyMap;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -20,21 +16,23 @@ public class Party {
     private final ConfigParser config;
     private final ProxyHandler proxyhandle;
     private int maxPlayer;
-    private static Class<?> clazz;
     private static Boolean compatStatus;
     private UUID leaderUUID;
     private final List<UUID> playerUUIDs = new ArrayList<>();
     @Getter
     private int id;
     public static final dbMap<Integer, Party> idMap = new partyMap();
-    public Party(UUID leader, Plugin plugin, ConfigParser config, ProxyHandler proxyhandle){
-        this(leader, plugin, config, proxyhandle, true);
+    public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle){
+        this(leader, config, proxyhandle, true);
     }
 
-    public Party(UUID leader, Plugin plugin, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
+    public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
         this.config = config;
         this.proxyhandle = proxyhandle;
         updateLimit();
+
+        //Это менять страшно, и благо не надо :D
+        //Чистая математика - неломаема.
         for (Integer i : idMap.idSet()) {
             if(!idMap.contains(i+1)) {
                 id = i+1;
@@ -44,43 +42,21 @@ public class Party {
                 id = idMap.idSet().size();
             }
         }
+
         this.leaderUUID = leader;
         this.playerUUIDs.add(leader);
+
         if(compatStatus == null) {
-            if (Bukkit.getPluginManager().isPluginEnabled("MythicDungeons")) {
-                compatStatus = false;
-            }else{
-                try {
-                    Class<?> mythic = Class.forName("net.playavalon.mythicdungeons.MythicDungeons");
-                    Field f = mythic.getDeclaredField("plugin");
-                    f.setAccessible(true);
-                    compatStatus = ((String) mythic.getMethod("getPartyPluginName").invoke(f.get(null))).equalsIgnoreCase(plugin.getName());
-                    CommandAPIBukkit.unregister("p", true, true);
-                } catch(Exception ignored){}
-            }
-            if(compatStatus == null) compatStatus = false;
+            compatStatus = config.isMDSupport();
+            if (!Bukkit.getPluginManager().isPluginEnabled("MythicDungeons")) compatStatus = false;
         }
+
         if(compatStatus) {
-            try {
-                if (!Party.clazz.getName().equals("IDungeonParty"))
-                    Party.clazz = Class.forName("net.playavalon.mythicdungeons.api.party.IDungeonParty");
-            } catch(Exception ignored){}
-            Object party = Proxy.newProxyInstance(clazz.getClassLoader(),
-                    new Class[] {Party.clazz},
-                    (proxy, method, args) -> {
-                        switch (method.getName()) {
-                            case "addPlayer" -> addPlayer((OfflinePlayer) args[0]);
-                            case "removePlayer" -> removePlayer((OfflinePlayer) args[0]);
-                            case "getPlayers" -> getPlayers();
-                            case "getLeader" -> getLeader();
-                            default -> throw new IllegalArgumentException("Proxy error!!!");
-                        }
-                        return null;
-                    });
-            try {
-                clazz.getMethod("initDungeonParty", Plugin.class).invoke(party, plugin);
-            }catch(Exception ignored){}
+            //Страшно? Да
+            //Зато Java не подгружает заранее для оптимизации, и не вылетает если нету MD
+            new ru.streamversus.mythicparties.Utilities.PartyMDWrapper(this).initDungeonParty();
         }
+        //Малюсенький костыль для бд, иначе выходят дубликаты
         if(map) idMap.add(id, this);
     }
     private void updateLimit(){

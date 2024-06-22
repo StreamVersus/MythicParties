@@ -5,15 +5,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Party;
 
 import java.util.ArrayList;
 import java.util.List;
 
+//Простенький враппер для динамической подгрузки поддержки с MD
 public class PartyMDWrapper implements IDungeonParty {
     private final Party party;
     public PartyMDWrapper(Party party){
         this.party = party;
+    }
+    public void initDungeonParty(){
+        this.initDungeonParty(MythicParties.getPlugin());
     }
     @Override
     public void addPlayer(Player player) {
