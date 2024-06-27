@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 public class PlayersBySlotArgument extends CustomArgument<List<OfflinePlayer>, String> {
     public PlayersBySlotArgument(String nodeName){
         super(new StringArgument(nodeName), new PlayersBySlotParser());
-        combineWith(new SubTagArgument("subtag"));
 
         ArgumentSuggestions<CommandSender> defaultSuggestor = ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
             Party party = (Party) info.previousArgs().get("subtag");
@@ -42,7 +41,7 @@ public class PlayersBySlotArgument extends CustomArgument<List<OfflinePlayer>, S
 
             return retval.toArray(String[]::new);
         }));
-        replaceSuggestions(defaultSuggestor);
+        includeSuggestions(defaultSuggestor);
     }
 }
 class PlayersBySlotParser implements CustomArgument.CustomArgumentInfoParser<List<OfflinePlayer>, String>{

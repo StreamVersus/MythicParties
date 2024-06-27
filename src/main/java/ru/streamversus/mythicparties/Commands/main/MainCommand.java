@@ -9,15 +9,15 @@ public class MainCommand extends CommandImpl {
     public MainCommand(String name){
         super(name);
 
-        withSubcommand(new accept(this));
-        withSubcommand(new disband(this));
-        withSubcommand(new givelead(this));
-        withSubcommand(new help(this));
-        withSubcommand(new invite(this));
-        withSubcommand(new kick(this));
-        withSubcommand(new leave(this));
-        withSubcommand(new refuse(this));
-        withSubcommand(new slotplayer(this));
+        new accept(this);
+        new disband(this);
+        new givelead(this);
+        new help(this);
+        new invite(this);
+        new kick(this);
+        new leave(this);
+        new refuse(this);
+        new slotplayer(this);
 
         register();
     }

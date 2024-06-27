@@ -18,7 +18,8 @@ public class GlobalTeamPlayerArgument extends CustomArgument<OfflinePlayer, Play
 
         ArgumentSuggestions<CommandSender> defaultSuggestor = ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
             Player p = (Player) info.sender();
-            List<String> playerList = MythicParties.getPartyService().getParty(p).getPlayers().stream().map(OfflinePlayer::getName).toList();
+            List<String> playerList = new java.util.ArrayList<>(MythicParties.getPartyService().getParty(p).getPlayers().stream().map(OfflinePlayer::getName).toList());
+            playerList.remove(info.sender().getName());
             //default return
             if (info.currentArg().isEmpty()) {
                 return playerList.toArray(String[]::new);

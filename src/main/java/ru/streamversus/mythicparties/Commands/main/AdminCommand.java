@@ -11,9 +11,9 @@ public class AdminCommand extends CommandImpl {
     public AdminCommand(String name){
         super(name);
 
-        withSubcommand(new command(this));
-        withSubcommand(new teleport(this));
-        withSubcommand(new reloadConfig(this));
+        new command(this);
+        new teleport(this);
+        new reloadConfig(this);
 
         register();
     }

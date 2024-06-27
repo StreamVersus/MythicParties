@@ -9,6 +9,7 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.arguments.PlayersBySlotArgument;
+import ru.streamversus.mythicparties.Commands.arguments.SubTagArgument;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
 import ru.streamversus.mythicparties.Commands.implementations.SubCommandImpl;
 import ru.streamversus.mythicparties.MythicParties;
@@ -23,8 +24,7 @@ public class teleport extends SubCommandImpl {
     //TODO: Server Argument
     public teleport(CommandImpl main){
         super(main, "teleport");
-        withPermission("MysticParties.party_a.teleport");
-        withArguments(new PlayersBySlotArgument("slots"));
+        withArguments(new SubTagArgument("subtag").combineWith(new PlayersBySlotArgument("slots")));
         withOptionalArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
         withOptionalArguments(new RotationArgument("rotation"));
         withOptionalArguments(new WorldArgument("world"));

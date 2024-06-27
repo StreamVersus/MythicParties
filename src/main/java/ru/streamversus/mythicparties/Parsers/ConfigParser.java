@@ -18,7 +18,8 @@ public class ConfigParser {
     private final YamlConfiguration langconfig;
     private FileConfiguration config;
     private final Plugin plugin;
-    private final Map<String, String> commandSuccessMap = new HashMap<>(), commandFailMap = new HashMap<>(), soundMap = new HashMap<>(), langmap = new HashMap<>();
+    private final Map<String, List<String>> commandSuccessMap = new HashMap<>(), commandFailMap = new HashMap<>();
+    private final Map<String, String> soundMap = new HashMap<>(), langmap = new HashMap<>();
     @Getter
     private List<String> commandNameList;
     @Getter
@@ -45,10 +46,10 @@ public class ConfigParser {
         commandSection.getKeys(false).forEach((string) -> {
             ConfigurationSection subsection = commandSection.getConfigurationSection(string);
             assert subsection != null;
-            String success = subsection.getString("commands");
-            String fail = subsection.getString("commands_fail");
-            if (success != null) commandSuccessMap.put(string, success);
-            if (fail != null) commandFailMap.put(string, fail);
+            List<String> success = subsection.getStringList("commands");
+            List<String> fail = subsection.getStringList("commands_fail");
+            commandSuccessMap.put(string, success);
+            commandFailMap.put(string, fail);
         });
 
         ConfigurationSection soundSection = config.getConfigurationSection("sound_notification");
@@ -111,7 +112,7 @@ public class ConfigParser {
         });
     }
 
-    public String getCommand(boolean status, String name) {
+    public List<String> getCommand(boolean status, String name) {
         return status ? commandSuccessMap.get(name) : commandFailMap.get(name);
     }
 

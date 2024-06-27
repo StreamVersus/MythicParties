@@ -20,6 +20,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import ru.streamversus.mythicparties.Commands.CommandService;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.Proxy.*;
 
@@ -27,7 +28,7 @@ import java.io.File;
 import java.util.Objects;
 
 
-public final class MythicParties extends JavaPlugin implements Listener{
+public class MythicParties extends JavaPlugin implements Listener{
     @Getter
     private static PartyService partyService;
     @Getter
@@ -102,6 +103,7 @@ public final class MythicParties extends JavaPlugin implements Listener{
         }
 
         WorldGuard.getInstance().getPlatform().getSessionManager().registerHandler(FlagHandler.FACTORY, null);
+        new CommandService(configParser);
     }
 
     @SneakyThrows

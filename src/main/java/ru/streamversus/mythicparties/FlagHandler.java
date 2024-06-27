@@ -42,11 +42,12 @@ public class FlagHandler extends Handler {
         int limitBuffer = 0;
 
         for (ProtectedRegion protectedRegion : set) {
+            if(protectedRegion == null) continue;
             Integer limit = protectedRegion.getFlag(MythicParties.getLimitFlag());
 
             if(!(limit == null)) limitBuffer = limitBuffer < limit ? limit : limitBuffer;
         }
-
+        if(limitBuffer == 0) limitBuffer = MythicParties.getConfigParser().getLimit();
         if(limitBuffer != MythicParties.getConfigParser().getLimit()){
 
             if(limitMap.containsKey(player.getUniqueId())){

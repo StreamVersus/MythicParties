@@ -1,6 +1,5 @@
 package ru.streamversus.mythicparties.Commands;
 
-import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
 import ru.streamversus.mythicparties.Commands.main.AdminCommand;
 import ru.streamversus.mythicparties.Commands.main.MainCommand;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
