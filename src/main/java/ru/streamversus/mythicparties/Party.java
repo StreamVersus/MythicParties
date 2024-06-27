@@ -25,9 +25,7 @@ public class Party {
     public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle){
         this(leader, config, proxyhandle, true);
     }
-    //TODO: Fully move commands
 
-    //TODO: Server Argument
     public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
         this.config = config;
         this.proxyhandle = proxyhandle;

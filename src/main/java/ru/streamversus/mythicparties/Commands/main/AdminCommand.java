@@ -10,8 +10,11 @@ import ru.streamversus.mythicparties.Commands.sub.Admin.teleport;
 public class AdminCommand extends CommandImpl {
     public AdminCommand(String name){
         super(name);
+
         withSubcommand(new command(this));
         withSubcommand(new teleport(this));
         withSubcommand(new reloadConfig(this));
+
+        register();
     }
 }

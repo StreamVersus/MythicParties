@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class teleport extends SubCommandImpl {
     private final ProxyHandler proxy = MythicParties.getHandler();
-
+    //TODO: Server Argument
     public teleport(CommandImpl main){
         super(main, "teleport");
         withPermission("MysticParties.party_a.teleport");

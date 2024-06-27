@@ -8,7 +8,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Party;
-import ru.streamversus.mythicparties.PartyService;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 
 import java.util.ArrayList;
