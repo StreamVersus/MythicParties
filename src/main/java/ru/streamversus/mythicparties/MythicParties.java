@@ -28,7 +28,8 @@ import java.util.Objects;
 
 
 public final class MythicParties extends JavaPlugin implements Listener{
-    private PartyService partyService;
+    @Getter
+    private static PartyService partyService;
     @Getter
     private static ConfigParser configParser;
     @Getter

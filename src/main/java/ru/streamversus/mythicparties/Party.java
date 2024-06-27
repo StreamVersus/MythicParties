@@ -6,8 +6,8 @@ import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.Proxy.ProxyHandler;
-import ru.streamversus.mythicparties.database.dbMap;
-import ru.streamversus.mythicparties.database.partyMap;
+import ru.streamversus.mythicparties.Database.dbMap;
+import ru.streamversus.mythicparties.Database.partyMap;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -25,14 +25,15 @@ public class Party {
     public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle){
         this(leader, config, proxyhandle, true);
     }
+    //TODO: Fully move commands
 
+    //TODO: Server Argument
     public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
         this.config = config;
         this.proxyhandle = proxyhandle;
         updateLimit();
 
         //Это менять страшно, и благо не надо :D
-        //Чистая математика - неломаема.
         for (Integer i : idMap.idSet()) {
             if(!idMap.contains(i+1)) {
                 id = i+1;
@@ -56,7 +57,7 @@ public class Party {
             //Зато Java не подгружает заранее для оптимизации, и не вылетает если нету MD
             new ru.streamversus.mythicparties.Utilities.PartyMDWrapper(this).initDungeonParty();
         }
-        //Малюсенький костыль для бд, иначе выходят дубликаты
+
         if(map) idMap.add(id, this);
     }
     private void updateLimit(){

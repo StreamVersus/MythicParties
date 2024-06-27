@@ -1,4 +1,4 @@
-package ru.streamversus.mythicparties.database;
+package ru.streamversus.mythicparties.Database;
 
 import java.util.Set;
 

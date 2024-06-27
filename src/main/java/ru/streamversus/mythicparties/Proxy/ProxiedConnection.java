@@ -19,7 +19,7 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
 import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
-import ru.streamversus.mythicparties.database.*;
+import ru.streamversus.mythicparties.Database.*;
 
 import java.sql.*;
 import java.util.*;

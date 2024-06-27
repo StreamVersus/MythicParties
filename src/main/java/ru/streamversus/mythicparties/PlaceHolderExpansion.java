@@ -50,7 +50,7 @@ public class PlaceHolderExpansion extends PlaceholderExpansion {
             } else if (params.matches("slot_\\[.*]_busy")){
                 return partyService.isSlotBusy(p, Integer.valueOf(params.split("\\[")[1].split("]")[0])) ? "Yes" : "No";
             } else if (params.matches("member_papi_\\[.*]_\\{.*}")){
-                Player p1 = partyService.getmember((Player) player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
+                Player p1 = partyService.getmember(player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
                 if(p1 == null) return "%party_" + params + "%";
                 String placeholder = params.split("\\{")[1].split("}")[0];
                 return PlaceholderAPI.setPlaceholders(p1, "%"+placeholder+"%");
