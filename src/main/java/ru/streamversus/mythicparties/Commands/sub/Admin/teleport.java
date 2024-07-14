@@ -21,12 +21,11 @@ import java.util.concurrent.CompletableFuture;
 
 public class teleport extends SubCommandImpl {
     private final ProxyHandler proxy = MythicParties.getHandler();
-    //TODO: Server Argument
     public teleport(CommandImpl main){
         super(main, "teleport");
         withArguments(new SubTagArgument("subtag").combineWith(new PlayersBySlotArgument("slots")));
-        withOptionalArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
-        withOptionalArguments(new RotationArgument("rotation"));
+        withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
+        withArguments(new RotationArgument("rotation"));
         withOptionalArguments(new WorldArgument("world"));
         if(MythicParties.getConfigParser().isProxy()){
             withOptionalArguments(new StringArgument("server").replaceSuggestions(ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> proxy.getServerList().toArray(new String[0])))));
@@ -36,7 +35,6 @@ public class teleport extends SubCommandImpl {
     @Override
     public boolean exec(CommandSender sender, CommandArguments args) {
         UUID id = ((Player) sender).getUniqueId();
-        Player player = (Player) sender;
         List<OfflinePlayer> teleportList = args.getUnchecked("slots");
         if(teleportList == null){
             proxy.sendMessage(id, "wrong_slots");
@@ -44,13 +42,15 @@ public class teleport extends SubCommandImpl {
         }
 
         for (OfflinePlayer offlinePlayer : teleportList) {
-            Location tploc = (Location) args.getOptional("location").orElse((player.getLocation()));
-            Rotation rot = (Rotation) args.getOptional("rotation").orElse(new Rotation(player.getYaw(), player.getPitch()));
-            World world = (World) args.getOptional("world").orElse(player.getWorld());
+            Location tploc = (Location) args.get("location");
+            Rotation rot = (Rotation) args.get("rotation");
+            World world = (World) args.get("world");
             String server = (String) args.getOptional("server").orElse("local");
 
+            assert tploc != null;
             tploc.setWorld(world);
 
+            assert rot != null;
             tploc.setPitch(rot.getPitch());
             tploc.setYaw(rot.getYaw());
 

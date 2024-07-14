@@ -22,7 +22,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.streamversus.mythicparties.Commands.CommandService;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
-import ru.streamversus.mythicparties.Proxy.*;
+import ru.streamversus.mythicparties.Proxy.ProxiedConnection;
+import ru.streamversus.mythicparties.Proxy.ProxyHandler;
 
 import java.io.File;
 import java.util.Objects;
@@ -73,8 +74,8 @@ public class MythicParties extends JavaPlugin implements Listener{
 
         configParser = new ConfigParser(this, YamlConfiguration.loadConfiguration(f));
 
-        handler = new Local(configParser);
-
+        //handler = new Local(configParser);
+        handler = new ProxiedConnection(this, configParser);
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this)
                 .shouldHookPaperReload(true)
                 .silentLogs(configParser.getVerbose()));
@@ -119,11 +120,9 @@ public class MythicParties extends JavaPlugin implements Listener{
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
-        getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
-            partyService.createParty(p);
-            partyService.scheduleKick(p, true);
-            partyService.scheduleDisband(p, true);
-        }, 5);
+        partyService.createParty(p);
+        partyService.scheduleKick(p, true);
+        partyService.scheduleDisband(p, true);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
