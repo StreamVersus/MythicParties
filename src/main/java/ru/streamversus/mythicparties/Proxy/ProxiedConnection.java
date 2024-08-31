@@ -1,46 +1,45 @@
 package ru.streamversus.mythicparties.Proxy;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import io.github.leonardosnt.bungeechannelapi.BungeeChannelApi;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.messaging.PluginMessageListener;
-import org.jetbrains.annotations.NotNull;
+import ru.streamversus.mythicparties.MythicParties;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 import ru.streamversus.mythicparties.Database.*;
-import ru.streamversus.mythicparties.Utilities.MessageSender;
+import ru.streamversus.mythicparties.Utilities.util;
 
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("UnstableApiUsage")
-public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageListener {
-    private final dbMap<UUID, Location> tpmap;
-    private final Object synchronizer = new Object();
+public class ProxiedConnection implements ProxyHandler, Listener {
+    private final Cache<UUID, Location> tpmap;
     private final ConfigParser config;
     @Getter
-    private Connection connect;
+    private final Connection connect;
     private final Plugin plugin;
-    @Getter
-    private String serverName;
     private final onlineServers serverList;
-    private final connectedPlayers players;
+    private final BungeeChannelApi api;
 
     @SneakyThrows
     public ProxiedConnection(Plugin plugin, ConfigParser config) {
         this.plugin = plugin;
         this.config = config;
-
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         Class.forName("com.mysql.cj.jdbc.Driver");
@@ -48,44 +47,97 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
                 "jdbc:mysql://" + config.getUrl() + "/" + config.getName() + "?characterEncoding=utf8&autoReconnect=true",
                 config.getUsername(), config.getPassword());
 
-        this.tpmap = new tpMap(this);
-        this.serverList = new onlineServers(this);
-        this.players = new connectedPlayers(this);
 
+        this.api = BungeeChannelApi.of(plugin);
+        this.tpmap = CacheBuilder.newBuilder()
+                .maximumSize(10000)
+                .expireAfterWrite(10, TimeUnit.SECONDS)
+                .build();
+        this.serverList = new onlineServers(this);
+
+        api.registerForwardListener("mythicparties", (s, player, bytes) -> {
+            ByteArrayDataInput io = ByteStreams.newDataInput(bytes);
+            var channel = io.readUTF();
+            switch(channel){
+                case "teleportTo" -> {
+                    UUID id = UUID.fromString(io.readUTF());
+                    Location loc = util.deserializeLoc(io.readUTF());
+                    tpmap.put(id, loc);
+                }
+                case "playSound" -> {
+                    UUID id = UUID.fromString(io.readUTF());
+                    if(isOnThisServer(id)){
+                        MythicParties.getHandler().playSound(id, io.readUTF());
+                    }
+                }
+                case "sendMessage" -> {
+                    UUID id = UUID.fromString(io.readUTF());
+                    if(isOnThisServer(id)){
+                        MythicParties.getHandler().sendMessage(id, io.readUTF());
+                    }
+                }
+                case "sendWithReplacers" -> {
+                    UUID id = UUID.fromString(io.readUTF());
+                    String replace = io.readUTF();
+
+                    if(isOnThisServer(id)){
+                        MythicParties.getConfigParser().sendWithReplacer(Bukkit.getPlayer(id), replace, io.readUTF());
+                    }
+                }
+            }
+        });
     }
     public void disable(){
-        serverList.remove(serverName);
+        serverList.remove();
         if(!serverList.isOnline()){
             invitedMap.drop();
             leaderMap.drop();
             onlineServers.drop();
             partyMap.drop();
-            tpMap.drop();
-            connectedPlayers.drop();
         }
     }
-
-    public void setServerName(String name){
-        serverName = name;
-        serverList.add(name);
-    }
     @SneakyThrows
-    public List<String> getPlayerList() {
-        return players.getNames();
+    public String getServerName(){
+        if(!serverList.isSetup()){
+            serverList.add(api.getServer().get());
+        }
+        return serverList.getName();
+    }
+
+    @SneakyThrows
+    public AtomicReference<List<String>> getPlayerList() {
+        return new AtomicReference<>(api.getPlayerList("ALL").join());
     }
     @SneakyThrows
     @Override
-    public List<String> getServerList() {
-        return null;
+    public AtomicReference<List<String>> getServerList() {
+        return new AtomicReference<>(api.getServers().join());
     }
 
     public boolean isOnThisServer(UUID player) {
-        return Bukkit.getPlayer(player) != null;
+        return Bukkit.getOnlinePlayers().stream().map(Entity::getUniqueId).anyMatch(id -> id.equals(player));
+    }
+
+    public void connectHere(OfflinePlayer p) {
+        api.connectOther(p.getName(), getServerName());
     }
 
     @Override
-    public void teleportTo(OfflinePlayer p, String server, Location location) {
+    public void teleportTo(UUID player, String server, Location location) {
+        if (isOnThisServer(player)) {
+            Bukkit.getPlayer(player).teleport(location);
+            return;
+        }
 
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        out.writeUTF("teleportTo");
+        out.writeUTF(String.valueOf(player));
+        out.writeUTF(util.serializeLoc(location));
+
+        api.forward(server, "mythicparties", out.toByteArray());
+
+        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () ->
+                api.connectOther(Bukkit.getOfflinePlayer(player).getName(), server), 1L);
     }
 
     @Override
@@ -96,16 +148,24 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
         out.writeUTF("executeAs");
         out.writeUTF(String.valueOf(player));
         out.writeUTF(command);
+        api.forwardToPlayer(Bukkit.getOfflinePlayer(player).getName(), "mythicparties", out.toByteArray());
+
         return true;
     }
 
     @Override
     public void playSound(UUID player, String sound) {
-        if (isOnThisServer(player)) config.playSound(sound, Bukkit.getPlayer(player));
+        if (isOnThisServer(player)) {
+            config.playSound(sound, Bukkit.getPlayer(player));
+            return;
+        }
+
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("playSound");
         out.writeUTF(String.valueOf(player));
         out.writeUTF(sound);
+
+        api.forwardToPlayer(Bukkit.getOfflinePlayer(player).getName(), "mythicparties", out.toByteArray());
     }
 
     @Override
@@ -115,6 +175,8 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
         out.writeUTF("sendMessage");
         out.writeUTF(String.valueOf(player));
         out.writeUTF(msgname);
+
+        api.forwardToPlayer(Bukkit.getOfflinePlayer(player).getName(), "mythicparties", out.toByteArray());
         return true;
     }
 
@@ -130,21 +192,14 @@ public class ProxiedConnection implements ProxyHandler,Listener, PluginMessageLi
         out.writeUTF(String.valueOf(player));
         out.writeUTF(replacer);
         out.writeUTF(msgname);
-    }
-    @SneakyThrows
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Bukkit.getScheduler().runTaskLater(plugin, () -> MessageSender.exec.add(event.getPlayer()), 100);
-        getServerList();
-    }
-    @SneakyThrows
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerLeave(PlayerQuitEvent event) {
-        MessageSender.exec.remove(event.getPlayer());
+
+        api.forwardToPlayer(Bukkit.getOfflinePlayer(player).getName(), "mythicparties", out.toByteArray());
     }
 
-    @Override
-    public void onPluginMessageReceived(@NotNull String s, @NotNull Player player, byte @NotNull [] bytes) {
-
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e){
+        if(tpmap.asMap().containsKey(e.getPlayer().getUniqueId())){
+            e.getPlayer().teleportAsync(tpmap.asMap().get(e.getPlayer().getUniqueId()));
+        }
     }
 }

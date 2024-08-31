@@ -2,7 +2,6 @@ package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.arguments.GlobalTeamPlayerArgument;
 import ru.streamversus.mythicparties.Commands.arguments.TeamSlotArgument;
@@ -20,24 +19,23 @@ public class slotplayer extends SubCommandImpl {
 
     public slotplayer(CommandImpl main){
         super(main, "slotplayer");
-        withArguments(new GlobalTeamPlayerArgument("playerArg"));
-        withArguments(new TeamSlotArgument("slots"));
+        withArguments(GlobalTeamPlayerArgument.get("playerArg"));
+        withArguments(TeamSlotArgument.get("slots"));
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
+    public boolean exec(Player send, CommandArguments args) {
         //compatibility block
-        Player send = (Player) sender;
         PartyService service = MythicParties.getPartyService();
-        dbMap<UUID, Party> leaderMap = service.getPartyMap();
+        dbMap<UUID, Party> leaderMap = service.getLeaderMap();
         ProxyHandler proxy = MythicParties.getHandler();
         //end
 
         if(service.isntLeader(send)) return proxy.sendMessage(send.getUniqueId(), "swap_non_leader");
 
         OfflinePlayer p = (OfflinePlayer) args.get("playerArg");
+        Integer slot = (Integer) args.get("slots");
         Party party = leaderMap.get(send.getUniqueId());
-        Integer slot = (Integer) args.get("slotArg");
 
         if(slot == null || p == null) return proxy.sendMessage(send.getUniqueId(), "swap_wrong_args");
         if(slot == 1) return proxy.sendMessage(send.getUniqueId(), "swap_leader");

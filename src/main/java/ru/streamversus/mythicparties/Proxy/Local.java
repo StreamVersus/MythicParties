@@ -2,7 +2,6 @@ package ru.streamversus.mythicparties.Proxy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Parsers.ConfigParser;
 
@@ -10,6 +9,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Local implements ProxyHandler{
     private final ConfigParser config;
@@ -18,24 +18,24 @@ public class Local implements ProxyHandler{
         this.config = config;
     }
     @Override
-    public List<String> getPlayerList() {
+    public AtomicReference<List<String>> getPlayerList() {
         List<String> retval = new ArrayList<>();
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             retval.add(onlinePlayer.getName());
         }
-        return retval;
+        return new AtomicReference<>(retval);
     }
 
     @Override
-    public List<String> getServerList() {
-        return new ArrayList<>(){{
+    public AtomicReference<List<String>> getServerList() {
+        return new AtomicReference<>(new ArrayList<>(){{
             add("local");
-        }};
+        }});
     }
 
     @Override
-    public void teleportTo(OfflinePlayer name, String server, Location location) {
-        Player p = name.getPlayer();
+    public void teleportTo(UUID player, String server, Location location) {
+        Player p = Bukkit.getPlayer(player);
         if(p == null) return;
         p.teleport(location);
     }

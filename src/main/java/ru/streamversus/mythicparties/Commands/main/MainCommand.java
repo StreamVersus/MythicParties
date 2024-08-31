@@ -18,6 +18,7 @@ public class MainCommand extends CommandImpl {
         new leave(this);
         new refuse(this);
         new slotplayer(this);
+        new warp(this);
 
         register();
     }

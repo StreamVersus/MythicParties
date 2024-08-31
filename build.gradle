@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'ru.StreamVersus'
-version = 'localBuild'
+version = 'BETA-1.1'
 
 repositories {
     mavenCentral()
@@ -28,7 +28,7 @@ dependencies {
     compileOnly "com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT"
     compileOnly "org.projectlombok:lombok:1.18.30"
     implementation "io.github.leonardosnt:bungeechannelapi:1.0.0-SNAPSHOT"
-    implementation "dev.jorel:commandapi-bukkit-shade:9.3.0"
+    implementation "dev.jorel:commandapi-bukkit-shade:9.5.3"
     annotationProcessor "org.projectlombok:lombok:1.18.30"
 }
 

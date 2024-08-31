@@ -17,12 +17,18 @@ public abstract class SubCommandImpl extends CommandImpl{
         subName = name;
         main.withSubcommand(this);
         mainCommand = main;
-        executes(this::execute);
+        executes((sender, args) -> {
+            var thread = new Thread(() -> execute(sender, args));
+            thread.setDaemon(true);
+            thread.start();
+        });
         withPermission("MythicParties."+ main.name + "." + name);
     }
+
     void regPerms(){
         Bukkit.getServer().getPluginManager().addPermission(new Permission("MythicParties." + mainCommand.name + "." + subName));
     }
+
     private void execute(CommandSender sender, CommandArguments args){
         if(!(sender instanceof Player p)) {
             MythicParties.getPlugin().getLogger().info("Plugin doesn't support executing commands from Console");
@@ -31,11 +37,13 @@ public abstract class SubCommandImpl extends CommandImpl{
 
         if(!(subName == null)) MythicParties.getHandler().playSound(p.getUniqueId(), subName);
 
-        boolean success = exec(sender, args);
+        boolean success = exec(p, args);
+        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(MythicParties.getPlugin(), () -> {
+            List<String> commandList = MythicParties.getConfigParser().getCommand(success, mainCommand.name+ "_" + subName);
+            if(commandList == null) return;
+            commandList.forEach(p::performCommand);
+        }, 0L);
 
-        List<String> commandList = MythicParties.getConfigParser().getCommand(success, mainCommand.name+ "_" + subName);
-        if(commandList == null) return;
-        commandList.forEach(p::performCommand);
     }
-    public abstract boolean exec(CommandSender sender, CommandArguments args);
+    public abstract boolean exec(Player sender, CommandArguments args);
 }

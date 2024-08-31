@@ -41,6 +41,9 @@ swap_empty_slot: <i><b><red>Этот слот пустой!</red></b></i>
 accept_no_invites: <i><b><red>Вас еще не приглашали!</red></b></i>
 accept_wrong_args: <i><b><red>Что-то не так с командой!</red></b></i>
 
+warp_no_players: <i><b><red>Ваша команда пустая!</red></b></i>
+warp_success: <i><b><green>Все игроки успешно телепортированны на ваш сервер</green></b></i>
+warp_player_success: <i><b><green>Вы были перемещенны на сервер к главе команды!</green></b></i>
 
 help: <i><b><yellow>Это плагин на команды!</yellow></b></i>
 button_accept: <green>Принять</green>

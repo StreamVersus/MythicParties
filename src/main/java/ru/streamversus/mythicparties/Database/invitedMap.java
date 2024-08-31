@@ -63,6 +63,7 @@ public class invitedMap implements dbMap<UUID, Party>{
         if(local){
             return localMap.remove(uuid);
         }
+        Party retval = get(uuid);
 
         String remove = "DELETE FROM invited WHERE uuid = ?";
 
@@ -70,7 +71,7 @@ public class invitedMap implements dbMap<UUID, Party>{
             prep.setString(1, util.getCrc32Hash(uuid));
             prep.executeUpdate();
         }
-        return null;
+        return retval;
     }
     @SneakyThrows
     @Override

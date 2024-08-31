@@ -1,7 +1,6 @@
 package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
 import ru.streamversus.mythicparties.Commands.implementations.SubCommandImpl;
@@ -20,17 +19,16 @@ public class leave extends SubCommandImpl {
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
+    public boolean exec(Player p, CommandArguments args) {
         //compatibility block
-        Player p = (Player) sender;
         PartyService service = MythicParties.getPartyService();
-        dbMap<UUID, Party> partyMap = service.getPartyMap();
-        dbMap<UUID, Party> leaderMap = service.getPartyMap();
+        dbMap<UUID, Party> playerMap = service.getPlayerMap();
+        dbMap<UUID, Party> leaderMap = service.getLeaderMap();
         ProxyHandler proxy = MythicParties.getHandler();
         //end
 
         if(leaderMap.contains(p.getUniqueId())) return proxy.sendMessage(p.getUniqueId(), "leave_leader");
-        Party party = partyMap.get(p.getUniqueId());
+        Party party = playerMap.get(p.getUniqueId());
         if(party == null) return proxy.sendMessage(p.getUniqueId(), "leave_no_party");
 
         party.removePlayer(p.getUniqueId());

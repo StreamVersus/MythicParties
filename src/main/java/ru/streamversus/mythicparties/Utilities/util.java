@@ -36,7 +36,9 @@ public class util {
     public static String serializeParty(Party party){
         StringBuilder retval = new StringBuilder();
 
-        List<OfflinePlayer> players = party.getPlayers();
+        retval.append(party.getId()).append(";");
+
+        List<OfflinePlayer> players = party.getPlayers().get();
         for (int i = 0; i < players.size(); i++) {
             OfflinePlayer p = players.get(i);
             String raw = String.valueOf(p.getUniqueId());
@@ -49,9 +51,11 @@ public class util {
         return retval.toString();
     }
     public static Party deserializeParty(String raw){
+        Integer id = Integer.valueOf(raw.split(";")[0]);
+        raw = raw.split(";")[1];
         String[] splited = raw.split(":");
         UUID leader = UUID.fromString(splited[0]);
-        Party party = new Party(leader, MythicParties.getConfigParser(), MythicParties.getHandler(), false);
+        Party party = new Party(leader, MythicParties.getConfigParser(), MythicParties.getHandler(), id);
         for(int i = 1; i < splited.length; i++){
             party.addPlayer(UUID.fromString(splited[1]));
         }

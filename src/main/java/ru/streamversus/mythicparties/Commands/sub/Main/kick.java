@@ -2,7 +2,6 @@ package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.arguments.GlobalTeamPlayerArgument;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
@@ -15,13 +14,12 @@ public class kick extends SubCommandImpl {
 
     public kick(CommandImpl main){
         super(main, "kick");
-        withArguments(new GlobalTeamPlayerArgument("playerArg"));
+        withArguments(GlobalTeamPlayerArgument.get("playerArg"));
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
+    public boolean exec(Player p, CommandArguments args) {
         //compatibility block
-        Player p = (Player) sender;
         PartyService service = MythicParties.getPartyService();
         ProxyHandler proxy = MythicParties.getHandler();
         //end

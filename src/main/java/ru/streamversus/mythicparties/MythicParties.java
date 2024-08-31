@@ -83,7 +83,7 @@ public class MythicParties extends JavaPlugin implements Listener{
 
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(0), true, true);
         CommandAPIBukkit.unregister(configParser.getCommandNameList().get(1), true, true);
-        /*
+
         if (configParser.isProxy()) {
             if (!Objects.requireNonNull(getServer().spigot().getConfig().getConfigurationSection("settings")).getBoolean("bungeecord")) {
                 getLogger().severe("Для корректной работы плагина с прокси, требуется включить поддержку Messaging BungeeCord(Даже для Velocity)");
@@ -92,7 +92,7 @@ public class MythicParties extends JavaPlugin implements Listener{
                 getServer().getPluginManager().disablePlugin(this);
             }
         }
-        */
+
         partyService = new PartyService(this, configParser, handler);
 
         getServer().getPluginManager().registerEvents(this, this);

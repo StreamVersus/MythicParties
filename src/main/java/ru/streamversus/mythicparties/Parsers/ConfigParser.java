@@ -72,6 +72,7 @@ public class ConfigParser {
         name = database.getString("name");
     }
     private void precompileLanguage(){
+        //refactor pls
         langconfig.getKeys(false).forEach((key) -> {
             String v = langconfig.getString(key);
             if(!(v == null)) langmap.put(key, v);

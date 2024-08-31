@@ -1,7 +1,7 @@
 package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
-import org.bukkit.command.CommandSender;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
 import ru.streamversus.mythicparties.Commands.implementations.SubCommandImpl;
@@ -20,19 +20,18 @@ public class refuse extends SubCommandImpl {
     }
 
     @Override
-    public boolean exec(CommandSender s, CommandArguments args) {
+    public boolean exec(Player sender, CommandArguments args) {
         //compatibility block
-        Player sender = (Player) s;
         PartyService service = MythicParties.getPartyService();
-        dbMap<UUID, Party> invitedMap = service.getPartyMap();
-        dbMap<UUID, Party> leaderMap = service.getPartyMap();
+        dbMap<UUID, Party> invitedMap = service.getInvitedMap();
+        dbMap<UUID, Party> leaderMap = service.getLeaderMap();
         ProxyHandler proxy = MythicParties.getHandler();
         //end
 
         if(!invitedMap.contains(sender.getUniqueId())) return proxy.sendMessage(sender.getUniqueId(), "accept_no_invites");
 
-        Player invitesender = (Player) invitedMap.get(sender.getUniqueId()).getLeader();
-        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args:");
+        OfflinePlayer invitesender = invitedMap.get(sender.getUniqueId()).getLeader();
+        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args");
 
         invitedMap.remove(sender.getUniqueId()).forEach(player -> proxy.sendWithReplacer(player.getUniqueId(),"invite_refused", sender.getName()));
 

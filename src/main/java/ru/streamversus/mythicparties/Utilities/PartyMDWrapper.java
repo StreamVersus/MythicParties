@@ -32,7 +32,7 @@ public class PartyMDWrapper implements IDungeonParty {
     //TODO: connection from other servers
     @Override
     public List<Player> getPlayers() {
-        List<OfflinePlayer> op = party.getPlayers();
+        List<OfflinePlayer> op = party.getPlayers().get();
         List<Player> retval = new ArrayList<>();
         op.forEach(p -> {
             Player p1 = Bukkit.getPlayer(p.getUniqueId());

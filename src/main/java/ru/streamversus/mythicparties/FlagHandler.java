@@ -32,7 +32,7 @@ public class FlagHandler extends Handler {
     @Override
     public void tick(LocalPlayer player, ApplicableRegionSet set) {
         RegionManager regions = WorldGuard.getInstance().getPlatform().getRegionContainer().get(player.getWorld());
-        assert regions != null;
+        if(regions == null) return;
         Set<ProtectedRegion> set1 = new HashSet<>(set.getRegions());
         set1.add(regions.getRegions().get("__global__"));
         limitUtil(player, set1);

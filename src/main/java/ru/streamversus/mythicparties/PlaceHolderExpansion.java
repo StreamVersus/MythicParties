@@ -11,10 +11,12 @@ public class PlaceHolderExpansion extends PlaceholderExpansion {
     public PlaceHolderExpansion(PartyService partyService){
         this.partyService = partyService;
     }
+    
     @Override
     public @NotNull String getIdentifier() {
         return "party";
     }
+
     @Override
     public @NotNull String getAuthor() {
         return "StreamVersus";
@@ -24,37 +26,50 @@ public class PlaceHolderExpansion extends PlaceholderExpansion {
     public @NotNull String getVersion() {
         return "1.0.0";
     }
+
     @Override
     public boolean persist() {
         return true;
     }
+
     @Override
     public boolean canRegister() {
         return true;
     }
+
     @Override
     public String onRequest(OfflinePlayer player, @NotNull String params) {
-        Player p = (Player) player;
-        if(params.equalsIgnoreCase("id")){return partyService.getPartyID(p).toString();}
-        else if(params.equalsIgnoreCase("leader_name")){return partyService.getLeaderName(p);}
-        else if(params.equalsIgnoreCase("size")){return partyService.getPartySize(p).toString();}
-        else if(params.equalsIgnoreCase("size_free")){return partyService.getFreeSlots(p).toString();}
-        else if(params.equalsIgnoreCase("slot")){return partyService.getPlayerID(p).toString();}
-        else if(params.equalsIgnoreCase("max_limit")){return partyService.getPartyLimit(p).toString();}
-        else if(params.equalsIgnoreCase("leader_stats")){return partyService.isPlayerLeader(p) ? "Yes" : "No";}
-        else if(params.equalsIgnoreCase("participant_stats")){return partyService.isPlayerParticipant(p) ? "Yes" : "No";}
-        else{
-            if(params.matches("member_name_\\[.*]")){
-                String raw = partyService.getPlayerName(p, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
-                return raw.isEmpty() ? "%party_" + params + "%" : raw;
-            } else if (params.matches("slot_\\[.*]_busy")){
-                return partyService.isSlotBusy(p, Integer.valueOf(params.split("\\[")[1].split("]")[0])) ? "Yes" : "No";
-            } else if (params.matches("member_papi_\\[.*]_\\{.*}")){
-                Player p1 = partyService.getmember(player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
-                if(p1 == null) return "%party_" + params + "%";
-                String placeholder = params.split("\\{")[1].split("}")[0];
-                return PlaceholderAPI.setPlaceholders(p1, "%"+placeholder+"%");
-            } else return null;
+        String retval;
+        switch (params.toLowerCase()){
+            case "id" -> retval = partyService.getPartyID(player).toString();
+            case "leader_name" -> retval = partyService.getLeaderName(player);
+            case "size" -> retval = partyService.getPartySize(player).toString();
+            case "size_free" -> retval = partyService.getFreeSlots(player).toString();
+            case "slot" -> retval = partyService.getPlayerID(player).toString();
+            case "max_limit" -> retval = partyService.getPartyLimit(player).toString();
+            case "leader_stats" -> retval = partyService.isPlayerLeader(player) ? "Yes" : "No";
+            case "participant_stats" -> retval = partyService.isPlayerParticipant(player) ? "Yes" : "No";
+            case "size_serverleader" -> retval = partyService.getPartySizeLeaderServer(player);
+            case "listname" -> retval = partyService.playerList(player);
+            case "listname_l" -> retval = partyService.playerListl(player);
+            case "listname_sl" -> retval = partyService.playerListsl(player);
+
+            default -> {
+                //переписать парсинг, это пиздец, мне стыдно за сплиты
+                if(params.matches("member_name_\\[.*]")){
+                    String raw = partyService.getPlayerName(player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
+                    return raw.isEmpty() ? "%party_" + params + "%" : raw;
+                } else if (params.matches("slot_\\[.*]_busy")){
+                    return partyService.isSlotBusy(player, Integer.valueOf(params.split("\\[")[1].split("]")[0])) ? "Yes" : "No";
+                } else if (params.matches("member_papi_\\[.*]_\\{.*}")){
+                    Player p1 = partyService.getmember(player, Integer.valueOf(params.split("\\[")[1].split("]")[0]));
+                    if(p1 == null) return "%party_" + params + "%";
+                    String placeholder = params.split("\\{")[1].split("}")[0];
+                    return PlaceholderAPI.setPlaceholders(p1, "%"+placeholder+"%");
+                } else return null;
+            }
         }
+
+        return retval;
     }
 }

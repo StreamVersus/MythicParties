@@ -10,6 +10,7 @@ import ru.streamversus.mythicparties.Database.dbMap;
 import ru.streamversus.mythicparties.Database.partyMap;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class Party {
@@ -23,23 +24,27 @@ public class Party {
     private int id;
     public static final dbMap<Integer, Party> idMap = new partyMap();
     public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle){
-        this(leader, config, proxyhandle, true);
+        this(leader, config, proxyhandle, null);
     }
 
-    public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle, boolean map) {
+    public Party(UUID leader, ConfigParser config, ProxyHandler proxyhandle, Integer id) {
         this.config = config;
         this.proxyhandle = proxyhandle;
         updateLimit();
 
         //Это менять страшно, и благо не надо :D
-        for (Integer i : idMap.idSet()) {
-            if(!idMap.contains(i+1)) {
-                id = i+1;
-                break;
+        if(id == null) {
+            for (Integer i : idMap.idSet()) {
+                if (!idMap.contains(i + 1)) {
+                    this.id = i + 1;
+                    break;
+                } else {
+                    this.id = idMap.idSet().size();
+                }
             }
-            else {
-                id = idMap.idSet().size();
-            }
+        }
+        else{
+            this.id = id;
         }
 
         this.leaderUUID = leader;
@@ -51,12 +56,10 @@ public class Party {
         }
 
         if(compatStatus) {
-            //Страшно? Да
-            //Зато Java не подгружает заранее для оптимизации, и не вылетает если нету MD
             new ru.streamversus.mythicparties.Utilities.PartyMDWrapper(this).initDungeonParty();
         }
 
-        if(map) idMap.add(id, this);
+        if(id == null) idMap.add(this.id, this);
     }
     private void updateLimit(){
         maxPlayer = FlagHandler.getLimitMap().get(leaderUUID) == null ? config.getLimit() : FlagHandler.getLimitMap().get(leaderUUID);
@@ -67,9 +70,8 @@ public class Party {
         playerUUIDs.add(player.getUniqueId());
         idMap.update(id, this);
     }
-    //Can cause problems, if unchecked
     public void addPlayer(UUID player) {
-        playerUUIDs.add(Bukkit.getOfflinePlayer(player).getUniqueId());
+        playerUUIDs.add(player);
         idMap.update(id, this);
     }
     public void forEach(Consumer<OfflinePlayer> cons) {
@@ -98,10 +100,10 @@ public class Party {
         playerUUIDs.remove(player);
         idMap.update(id, this);
     }
-    public List<OfflinePlayer> getPlayers() {
+    public AtomicReference<List<OfflinePlayer>> getPlayers() {
         List<OfflinePlayer> players = new ArrayList<>();
         playerUUIDs.forEach(uuid -> players.add(Bukkit.getOfflinePlayer(uuid)));
-        return players;
+        return new AtomicReference<>(players);
     }
     public OfflinePlayer getPlayer(int id){
         UUID uuid;

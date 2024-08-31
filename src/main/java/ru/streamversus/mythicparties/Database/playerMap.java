@@ -32,9 +32,17 @@ public class playerMap implements dbMap<UUID, Party> {
         }
     }
     @Override
+    @SneakyThrows
     public void add(UUID uuid, Party party) {
         if(local){
             localMap.put(uuid, party);
+        }
+        String add = "INSERT INTO parties(id, party) VALUES (?, ?)";
+
+        try(PreparedStatement prep = connect.prepareStatement(add)) {
+            prep.setInt(1, party.getId());
+            prep.setString(2, util.serializeParty(party));
+            prep.executeUpdate();
         }
     }
 
@@ -44,11 +52,21 @@ public class playerMap implements dbMap<UUID, Party> {
     }
 
     @Override
+    @SneakyThrows
     public Party remove(UUID uuid) {
         if(local){
             return localMap.remove(uuid);
         }
-        return null;
+        Party retval = get(uuid);
+
+        String remove = "DELETE FROM parties WHERE id = ?";
+
+        try(PreparedStatement prep = connect.prepareStatement(remove)) {
+            prep.setInt(1, retval.getId());
+            prep.executeUpdate();
+        }
+
+        return retval;
     }
     @SneakyThrows
     @Override

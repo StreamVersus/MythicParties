@@ -1,5 +1,6 @@
 package ru.streamversus.mythicparties.Commands.arguments;
 
+import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.CustomArgument;
 import dev.jorel.commandapi.arguments.StringArgument;
@@ -17,10 +18,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class SubTagArgument extends CustomArgument<Party, String> {
-    public SubTagArgument(String nodeName) {
+    private SubTagArgument(String nodeName) {
         super(new StringArgument(nodeName), new SubTagParser());
+    }
 
-        ArgumentSuggestions<CommandSender> defaultSuggestor =ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
+    public static Argument<Party> get(String nodename) {
+        ArgumentSuggestions<CommandSender> defaultSuggestor = ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
             String currentArg = info.currentArg();
             ProxyHandler proxy = MythicParties.getHandler();
             if(currentArg.startsWith("i")) {
@@ -40,13 +43,12 @@ public class SubTagArgument extends CustomArgument<Party, String> {
             else if(currentArg.startsWith("p")){
                 List<String> retval = new ArrayList<>();
 
-                String[] playerList = proxy.getPlayerList().toArray(String[]::new);
-                int l = playerList.length;
+                var playerList = proxy.getPlayerList().get();
+                int l = playerList.size();
                 if(l > 9) l = 9;
 
-                playerList = proxy.getPlayerList().subList(0, l).toArray(String[]::new);
                 for (int i = 0; i < l; i++) {
-                    retval.add("player_" + playerList[i]);
+                    retval.add("player_" + playerList.get(i));
                 }
 
                 return retval.toArray(String[]::new);
@@ -62,7 +64,8 @@ public class SubTagArgument extends CustomArgument<Party, String> {
             retval[2] = "player_*";
             return retval;
         }));
-        includeSuggestions(defaultSuggestor);
+
+        return new SubTagArgument(nodename).includeSuggestions(defaultSuggestor);
     }
 }
 class SubTagParser implements CustomArgument.CustomArgumentInfoParser<Party, String>{

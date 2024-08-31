@@ -2,7 +2,6 @@ package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -22,16 +21,15 @@ public class invite extends SubCommandImpl {
 
     public invite(CommandImpl main){
         super(main, "invite");
-        withArguments(new GlobalPlayerArgument("playerArg"));
+        withArguments(GlobalPlayerArgument.get("playerArg"));
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
+    public boolean exec(Player p, CommandArguments args) {
         //compatibility block
-        Player p = (Player) sender;
         PartyService service = MythicParties.getPartyService();
-        dbMap<UUID, Party> invitedMap = service.getPartyMap();
-        dbMap<UUID, Party> leaderMap = service.getPartyMap();
+        dbMap<UUID, Party> invitedMap = service.getInvitedMap();
+        dbMap<UUID, Party> leaderMap = service.getLeaderMap();
         ProxyHandler proxy = MythicParties.getHandler();
         Map<UUID, BukkitTask> inviteTask = service.getInviteTask();
         //end

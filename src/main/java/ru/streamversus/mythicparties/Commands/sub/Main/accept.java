@@ -2,7 +2,6 @@ package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
@@ -23,13 +22,12 @@ public class accept extends SubCommandImpl {
     }
 
     @Override
-    public boolean exec(CommandSender s, CommandArguments args) {
+    public boolean exec(Player sender, CommandArguments args) {
         //compatibility block
-        Player sender = (Player) s;
         PartyService service = MythicParties.getPartyService();
-        dbMap<UUID, Party> partyMap = service.getPartyMap();
-        dbMap<UUID, Party> invitedMap = service.getPartyMap();
-        dbMap<UUID, Party> leaderMap = service.getPartyMap();
+        dbMap<Integer, Party> partyMap = Party.idMap;
+        dbMap<UUID, Party> invitedMap = service.getInvitedMap();
+        dbMap<UUID, Party> leaderMap = service.getLeaderMap();
         ProxyHandler proxy = MythicParties.getHandler();
         Map<UUID, BukkitTask> inviteTask = service.getInviteTask();
         //end
@@ -37,16 +35,17 @@ public class accept extends SubCommandImpl {
         if(!invitedMap.contains(sender.getUniqueId())) return proxy.sendMessage(sender.getUniqueId(), "accept_no_invites");
 
         OfflinePlayer invitesender = invitedMap.get(sender.getUniqueId()).getLeader();
-        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args:");
-
-        invitedMap.remove(sender.getUniqueId());
+        if(leaderMap.get(invitesender.getUniqueId()) == null || invitedMap.get(sender.getUniqueId()).getLeader() != invitesender) return proxy.sendMessage(sender.getUniqueId(), "accept_wrong_args");
 
         Party party = leaderMap.get(invitesender.getUniqueId());
         party.addPlayer(sender);
         party.forEach(player -> proxy.sendWithReplacer(player.getUniqueId(), "invite_accepted", sender.getName()));
 
-        leaderMap.remove(sender.getUniqueId()).destroy();
-        partyMap.replace(sender.getUniqueId(), party);
+        Party remove = leaderMap.remove(sender.getUniqueId());
+        partyMap.remove(remove.getId()).destroy();
+
+        partyMap.update(party.getId(), party);
+        leaderMap.update(invitesender.getUniqueId(), party);
         inviteTask.remove(sender.getUniqueId()).cancel();
 
         return true;

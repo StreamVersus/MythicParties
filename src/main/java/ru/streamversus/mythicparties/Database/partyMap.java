@@ -66,16 +66,17 @@ public class partyMap implements dbMap<Integer, Party>{
     @SneakyThrows
     public Party remove(Integer id){
         if(local){
-            localMap.remove(id);
-            return null;
+            return localMap.remove(id);
         }
+        Party retval = get(id);
+
         String remove = "DELETE FROM parties WHERE id = ?";
 
         try(PreparedStatement prep = connect.prepareStatement(remove)) {
             prep.setInt(1, id);
             prep.executeUpdate();
         }
-        return null;
+        return retval;
     }
     @SneakyThrows
     public Party get(Integer id){

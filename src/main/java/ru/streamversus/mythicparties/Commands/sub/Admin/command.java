@@ -3,7 +3,6 @@ package ru.streamversus.mythicparties.Commands.sub.Admin;
 import dev.jorel.commandapi.arguments.GreedyStringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.arguments.PlayersBySlotArgument;
 import ru.streamversus.mythicparties.Commands.arguments.SubTagArgument;
@@ -20,13 +19,13 @@ public class command extends SubCommandImpl {
 
     public command(CommandImpl main){
         super(main, "command");
-        withArguments(new SubTagArgument("subtag").combineWith(new PlayersBySlotArgument("slots")));
+        withArguments(SubTagArgument.get("subtag").combineWith(PlayersBySlotArgument.get("slots")));
         withArguments(new GreedyStringArgument("command"));
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
-        UUID id = ((Player) sender).getUniqueId();
+    public boolean exec(Player sender, CommandArguments args) {
+        UUID id = (sender).getUniqueId();
         List<OfflinePlayer> executeList = args.getUnchecked("slots");
         if(executeList == null){
             proxy.sendMessage(id, "wrong_subtag");

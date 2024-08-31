@@ -6,7 +6,6 @@ import dev.jorel.commandapi.wrappers.Rotation;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.arguments.PlayersBySlotArgument;
 import ru.streamversus.mythicparties.Commands.arguments.SubTagArgument;
@@ -23,18 +22,19 @@ public class teleport extends SubCommandImpl {
     private final ProxyHandler proxy = MythicParties.getHandler();
     public teleport(CommandImpl main){
         super(main, "teleport");
-        withArguments(new SubTagArgument("subtag").combineWith(new PlayersBySlotArgument("slots")));
+        withArguments(SubTagArgument.get("subtag").combineWith(PlayersBySlotArgument.get("slots")));
         withArguments(new LocationArgument("location", LocationType.PRECISE_POSITION));
         withArguments(new RotationArgument("rotation"));
         withOptionalArguments(new WorldArgument("world"));
         if(MythicParties.getConfigParser().isProxy()){
-            withOptionalArguments(new StringArgument("server").replaceSuggestions(ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> proxy.getServerList().toArray(new String[0])))));
+            withOptionalArguments(new StringArgument("server").replaceSuggestions(ArgumentSuggestions.stringsAsync(info ->
+                    CompletableFuture.supplyAsync(() -> proxy.getServerList().get().toArray(String[]::new)))));
         }
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
-        UUID id = ((Player) sender).getUniqueId();
+    public boolean exec(Player sender, CommandArguments args) {
+        UUID id = (sender).getUniqueId();
         List<OfflinePlayer> teleportList = args.getUnchecked("slots");
         if(teleportList == null){
             proxy.sendMessage(id, "wrong_slots");
@@ -54,7 +54,7 @@ public class teleport extends SubCommandImpl {
             tploc.setPitch(rot.getPitch());
             tploc.setYaw(rot.getYaw());
 
-            proxy.teleportTo(offlinePlayer, server, tploc);
+            proxy.teleportTo(offlinePlayer.getUniqueId(), server, tploc);
         }
         return true;
     }

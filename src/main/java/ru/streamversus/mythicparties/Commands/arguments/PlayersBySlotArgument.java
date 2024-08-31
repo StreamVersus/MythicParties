@@ -1,5 +1,6 @@
 package ru.streamversus.mythicparties.Commands.arguments;
 
+import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.CustomArgument;
 import dev.jorel.commandapi.arguments.StringArgument;
@@ -15,9 +16,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class PlayersBySlotArgument extends CustomArgument<List<OfflinePlayer>, String> {
-    public PlayersBySlotArgument(String nodeName){
+    private PlayersBySlotArgument(String nodeName){
         super(new StringArgument(nodeName), new PlayersBySlotParser());
+    }
 
+    public static Argument<List<OfflinePlayer>> get(String nodename) {
         ArgumentSuggestions<CommandSender> defaultSuggestor = ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
             Party party = (Party) info.previousArgs().get("subtag");
             assert party != null;
@@ -41,7 +44,8 @@ public class PlayersBySlotArgument extends CustomArgument<List<OfflinePlayer>, S
 
             return retval.toArray(String[]::new);
         }));
-        includeSuggestions(defaultSuggestor);
+
+        return new PlayersBySlotArgument(nodename).includeSuggestions(defaultSuggestor);
     }
 }
 class PlayersBySlotParser implements CustomArgument.CustomArgumentInfoParser<List<OfflinePlayer>, String>{
@@ -57,7 +61,7 @@ class PlayersBySlotParser implements CustomArgument.CustomArgumentInfoParser<Lis
         String raw = customArgumentInfo.input();
 
         if(raw.equals("all")) {
-            retval = party.getPlayers();
+            retval = party.getPlayers().get();
         }else{
             String[] slots = (raw).split("/");
             for (String s : slots) {

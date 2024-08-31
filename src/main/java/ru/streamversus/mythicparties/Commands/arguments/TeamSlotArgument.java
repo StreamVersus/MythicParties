@@ -1,5 +1,6 @@
 package ru.streamversus.mythicparties.Commands.arguments;
 
+import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.IntegerArgument;
 import org.bukkit.command.CommandSender;
@@ -12,9 +13,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class TeamSlotArgument extends IntegerArgument {
-    public TeamSlotArgument(String nodeName) {
+    private TeamSlotArgument(String nodeName) {
         super(nodeName);
+    }
 
+    public static Argument<Integer> get(String nodename) {
         ArgumentSuggestions<CommandSender> defaultSuggestor = ArgumentSuggestions.stringsAsync(info -> CompletableFuture.supplyAsync(() -> {
             PartyService service = MythicParties.getPartyService();
 
@@ -28,6 +31,7 @@ public class TeamSlotArgument extends IntegerArgument {
 
             return retval.toArray(String[]::new);
         }));
-        includeSuggestions(defaultSuggestor);
+
+        return new TeamSlotArgument(nodename).includeSuggestions(defaultSuggestor);
     }
 }

@@ -1,7 +1,6 @@
 package ru.streamversus.mythicparties.Commands.sub.Main;
 
 import dev.jorel.commandapi.executors.CommandArguments;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import ru.streamversus.mythicparties.Commands.implementations.CommandImpl;
 import ru.streamversus.mythicparties.Commands.implementations.SubCommandImpl;
@@ -15,11 +14,11 @@ public class help extends SubCommandImpl {
     }
 
     @Override
-    public boolean exec(CommandSender sender, CommandArguments args) {
+    public boolean exec(Player sender, CommandArguments args) {
         //compatibility block
         ProxyHandler proxy = MythicParties.getHandler();
         //end
 
-        return proxy.sendMessage(((Player) sender).getUniqueId(), "help");
+        return proxy.sendMessage(sender.getUniqueId(), "help");
     }
 }
